@@ -64,7 +64,8 @@ marcada como tal hasta que una persona la acepta, y queda registrada. Siguiendo
 la idea de vigilancia epistemológica de Bourdieu et al. (2008), la IA también
 puede hacer lo contrario de lo cómodo, cuestionar un código, señalar un
 fragmento que contradice una categoría o preguntar qué supuesto hay detrás de
-una pregunta de la guía.
+una pregunta de la guía. En el análisis la IA escribe código, no inventa
+resultados, cada cifra sale de R o Python ejecutados y se puede auditar.
 
 **Trazabilidad.** Cada resultado debe poder rastrearse hasta sus datos y sus
 decisiones. La bitácora del proyecto no es un anexo, es parte del método, y
@@ -144,11 +145,18 @@ con el audio.
 - **Integración mixta**, para poner lado a lado resultados de distintos
   métodos.
 
+Los análisis corren en notebooks de R o Python dentro de la herramienta, con
+asistencia de IA. Un gráfico, una tabla o una cifra se fijan con un clic y
+quedan disponibles para citarlos al escribir. Cada resultado fijado guarda con
+qué código, datos y versiones se hizo, y si cambian los datos se marca como
+desactualizado hasta que se vuelve a calcular.
+
 ### 8. Escritura y divulgación
 
 Redactar el informe con citas, figuras y tablas que salen del análisis, y
 generar desde el mismo documento el PDF final y un sitio web para divulgar el
-proyecto.
+proyecto. Los resultados fijados se citan en el texto, y cuando se recalculan
+el documento se actualiza solo.
 
 ## Cómo se construye
 

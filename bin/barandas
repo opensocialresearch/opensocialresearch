@@ -31,9 +31,10 @@ cargo llvm-cov -q --lcov --output-path lcov.info >/dev/null
 cargo crap --lcov lcov.info --threshold 30 --fail-above --summary
 
 paso "mutación sobre el diff contra $base"
-git diff "$base" -- 'src/*.rs' > /tmp/osr-mutantes.diff || true
+# Prefijos a/ y b/ explícitos: con diff.mnemonicPrefix, cargo-mutants no reconoce los archivos.
+git -c diff.mnemonicPrefix=false diff --src-prefix=a/ --dst-prefix=b/ "$base" -- 'src/*.rs' > /tmp/osr-mutantes.diff || true
 if [[ -s /tmp/osr-mutantes.diff ]]; then
-  cargo mutants --in-diff /tmp/osr-mutantes.diff --no-shuffle -- -q
+  cargo mutants --in-diff /tmp/osr-mutantes.diff --no-shuffle
 else
   echo "sin cambios en src/"
 fi

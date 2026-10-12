@@ -19,6 +19,9 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov,cargo-mutants,cargo-crap
+      - name: Espacios de nombres sin privilegios
+        # Ubuntu 24.04 los restringe y el escenario de disco lleno (PRY-01.5) los usa.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Barandas
         env:
           OSR_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}

@@ -6,6 +6,20 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-38.** Copia del proyecto de prueba (PRY-17). «Una copia del proyecto
+  de prueba» ya no crea un proyecto vacío con `osr nuevo`, copia
+  `tests/datos/proyecto/` a `{proyecto}` y le devuelve lo que git no guarda.
+  Crea las carpetas de la columna «Al crear» de PRY-02 que falten, hoy
+  `identificable/consentimientos/`, y `.osr/`, sin la cual `osr abrir` sale
+  con código 6, pero no crea `.osr/indice.sqlite` ni `.osr/bloqueo`, que son
+  de `osr`, ni ningún `.gitkeep`. Fija los permisos de SRV-13, 0700 en las
+  carpetas, 0400 en el audio `identificable/entrevistas/<id>/<id>.<ext>` y en
+  todo lo de `origen/`, y 0600 en los demás archivos, ficha del audio
+  incluida, porque la ficha no es un original. Los datos se buscan desde
+  `CARGO_MANIFEST_DIR`, así no dependen del directorio de trabajo. Con el
+  cambio siguen pasando los mismos 63 escenarios, ninguno falla, y PRY-17.2
+  suma el 64 con dos pasos nuevos acotados a la raíz de los datos de prueba.
+
 - **D-37.** Datos de prueba (PRY-17). Viven en `tests/datos/`, con el
   `LEEME` en la raíz, los guiones y los generadores en `fuentes/`, los
   archivos sueltos en `sueltos/` y el proyecto de prueba en `proyecto/`. El
@@ -276,6 +290,8 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
   `/?token=` y `/no-existe`, los encabezados Authorization y Cookie y el Origin
   propio, y las huellas de carpetas bajo `{tmp}`. Quien implemente SRV-06,
   SRV-07, SRV-11 o PRY-17 amplía esas capturas.
+  D-38 la reemplaza en lo del proyecto vacío de «una copia del proyecto de
+  prueba».
 
 - **D-24.** Token por arranque (SRV-03). El token llegó con SRV-01, porque la
   línea de arranque ya lo lleva, y se genera con 256 bits de `/dev/urandom` en

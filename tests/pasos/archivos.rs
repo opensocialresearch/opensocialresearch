@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use cucumber::gherkin::Step;
 use cucumber::{given, then};
@@ -17,13 +17,89 @@ fn esta_vacia(carpeta: &Path) -> bool {
         .is_none()
 }
 
-/// Los datos de prueba de PRY-17 todavía no existen, así que por ahora el
-/// proyecto de prueba es uno vacío, creado en `{proyecto}` con `osr nuevo` y
-/// cerrado de forma ordenada (D-27).
+/// Los datos de prueba de PRY-17, en `tests/datos/` del repositorio.
+fn datos_de_prueba() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/datos")
+}
+
+/// Las carpetas de la columna «Al crear» de PRY-02, más `.osr/`, sin la cual
+/// `osr abrir` no reconoce el proyecto. Git no guarda carpetas vacías.
+const CARPETAS_AL_CREAR: [&str; 5] = [
+    "bitacora",
+    "participantes",
+    "identificable/consentimientos",
+    "identificable/entrevistas",
+    ".osr",
+];
+
+/// Copia `origen` en `destino`, que no existe, carpeta por carpeta.
+fn copiar_arbol(origen: &Path, destino: &Path) {
+    fs::create_dir(destino).unwrap_or_else(|e| panic!("crear {}: {e}", destino.display()));
+    for entrada in fs::read_dir(origen).expect("leer los datos de prueba") {
+        let entrada = entrada.expect("leer una entrada");
+        let hacia = destino.join(entrada.file_name());
+        if entrada.file_type().expect("tipo de la entrada").is_dir() {
+            copiar_arbol(&entrada.path(), &hacia);
+        } else {
+            fs::copy(entrada.path(), &hacia).expect("copiar un archivo");
+        }
+    }
+}
+
+/// Si `relativa` es un original de solo lectura según SRV-13, el audio
+/// `identificable/entrevistas/<id>/<id>.<ext>` o algo bajo `origen/`.
+fn es_original(relativa: &Path) -> bool {
+    let partes: Vec<&str> = relativa.iter().filter_map(|p| p.to_str()).collect();
+    match partes.as_slice() {
+        ["identificable", "entrevistas", _, "origen", ..] => true,
+        ["identificable", "entrevistas", id, nombre] => nombre
+            .strip_prefix(&format!("{id}."))
+            .is_some_and(|ext| !ext.is_empty() && !ext.contains('.')),
+        _ => false,
+    }
+}
+
+/// Fija los permisos de SRV-13 bajo `carpeta`: carpetas 0700, originales
+/// 0400 y los demás archivos 0600.
+fn fijar_permisos(raiz: &Path, carpeta: &Path) {
+    for entrada in fs::read_dir(carpeta).expect("leer el proyecto") {
+        let ruta = entrada.expect("leer una entrada").path();
+        if ruta.is_dir() {
+            fijar_permisos(raiz, &ruta);
+            continue;
+        }
+        let modo = if es_original(ruta.strip_prefix(raiz).unwrap()) {
+            0o400
+        } else {
+            0o600
+        };
+        fs::set_permissions(&ruta, fs::Permissions::from_mode(modo)).expect("fijar permisos");
+    }
+    fs::set_permissions(carpeta, fs::Permissions::from_mode(0o700)).expect("fijar permisos");
+}
+
+/// Copia el proyecto de prueba de PRY-17 en `{proyecto}` y le devuelve lo
+/// que git no guarda, las carpetas vacías y los permisos (D-38). No crea el
+/// índice ni el bloqueo, que son de `osr`.
 #[given("una copia del proyecto de prueba")]
 fn copia_del_proyecto(mundo: &mut Mundo) {
     assert!(!mundo.proyecto.exists());
-    mundo.crear_cerrado();
+    copiar_arbol(&datos_de_prueba().join("proyecto"), &mundo.proyecto);
+    for carpeta in CARPETAS_AL_CREAR {
+        fs::create_dir_all(mundo.proyecto.join(carpeta)).expect("crear una carpeta");
+    }
+    fijar_permisos(&mundo.proyecto, &mundo.proyecto);
+}
+
+#[given("los datos de prueba del repositorio")]
+fn datos_del_repositorio(_mundo: &mut Mundo) {
+    assert!(datos_de_prueba().is_dir(), "faltan los datos de prueba");
+}
+
+#[then(regex = r#"^existe el archivo "([^"/]+)" en la raíz de los datos de prueba$"#)]
+fn archivo_en_los_datos(_mundo: &mut Mundo, archivo: String) {
+    let ruta = datos_de_prueba().join(&archivo);
+    assert!(ruta.is_file(), "no existe el archivo {}", ruta.display());
 }
 
 #[given("se tomó la huella de cada archivo del proyecto")]
@@ -66,8 +142,8 @@ fn archivo_con_texto(mundo: &mut Mundo, archivo: String, texto: String) {
     fs::write(&archivo, texto).expect("escribir el archivo");
 }
 
-// Solo carpetas bajo `{tmp}`. Las de los datos de prueba no existen hasta
-// PRY-17, y sus escenarios quedan omitidos (D-20).
+// Solo carpetas bajo `{tmp}`. Las del proyecto, como `origen/` de TRA-10,
+// llegan con sus requisitos, y sus escenarios quedan omitidos (D-20).
 #[given(regex = r#"^se tomó la huella de cada archivo de "(\{tmp\}[^"]*)"$"#)]
 fn tomar_huellas(mundo: &mut Mundo, carpeta: String) {
     mundo.huellas = rutas(&mundo.ruta(&carpeta));

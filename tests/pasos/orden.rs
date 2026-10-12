@@ -181,15 +181,6 @@ impl Mundo {
         let codigo = terminar(self.osr.as_mut().unwrap());
         assert_eq!(codigo, Some(0), "osr no terminó con código 0 en 3 s");
     }
-
-    /// Crea `{proyecto}` con `osr nuevo` y lo cierra de forma ordenada, así
-    /// queda en el disco como lo deja la app cerrada.
-    pub(super) fn crear_cerrado(&mut self) {
-        let proyecto = self.proyecto.to_string_lossy().into_owned();
-        self.lanzar(&format!("osr nuevo \"{proyecto}\" --sin-navegador"));
-        let mut osr = self.osr.take().expect("falta osr");
-        assert_eq!(terminar(&mut osr), Some(0), "osr nuevo no cerró en orden");
-    }
 }
 
 // Solo las órdenes que existen, `osr`, `osr nuevo`, `osr abrir` y `osr

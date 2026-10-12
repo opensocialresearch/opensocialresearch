@@ -169,6 +169,31 @@ Por ahora la usa una sola persona. La meta es que después sea útil para otras
 investigadoras e investigadores, en universidades, organizaciones y equipos
 pequeños.
 
+## Cómo funciona
+
+Es una aplicación web local. Se descarga un solo programa, se ejecuta en la
+propia computadora, levanta un servidor que solo atiende a esa máquina y abre
+la herramienta en el navegador. Se usa como una página web, pero nada sale a
+internet salvo que quien investiga lo decida.
+
+Sigue la idea de software local-first, en la que los datos viven en la
+computadora de su dueño y la nube es opcional (Kleppmann et al., 2019). Las
+entrevistas, los audios y los datos de las personas participantes se quedan
+en la máquina de quien investiga.
+
+La fuerza está en las integraciones. Desde la herramienta se conectan, cuando
+se quieren, servicios para buscar bibliografía, repositorios de datos
+abiertos, modelos de inteligencia artificial locales o en la nube, y cómputo
+externo, como el clúster de una
+universidad o un servicio de nube que se paga aparte, para correr lo que la
+computadora propia no puede. Quien investiga pone su llave de acceso y decide
+qué se manda afuera.
+
+Tiene que funcionar bien en computadoras modestas, que son las que tiene
+buena parte de las personas que empiezan a investigar. Debe abrir rápido,
+usar poca memoria y no trabar la máquina, y lo pesado se puede mandar a otro
+lado.
+
 ## Licencia
 
 El código se publica con licencia MIT. Cualquiera puede usarlo, modificarlo,
@@ -191,6 +216,11 @@ que la herramienta llegue lo más lejos posible.
 - Della Porta, D. y Keating, M. (eds.) (2013). *Enfoques y metodologías de las
   ciencias sociales. Una perspectiva pluralista*. Akal.
 - Flick, U. (2015). *El diseño de investigación cualitativa*. Morata.
+- Kleppmann, M., Wiggins, A., van Hardenberg, P. y McGranaghan, M. (2019).
+  Local-first software. You own your data, in spite of the cloud. En
+  *Proceedings of the 2019 ACM SIGPLAN International Symposium on New Ideas,
+  New Paradigms, and Reflections on Programming and Software (Onward! 2019)*
+  (pp. 154-178). ACM. https://doi.org/10.1145/3359591.3359737
 - Kvale, S. (2011). *Las entrevistas en investigación cualitativa*. Morata.
 - Wood, D., Bruner, J. S. y Ross, G. (1976). The role of tutoring in problem
   solving. *Journal of Child Psychology and Psychiatry*, *17*(2), 89-100.

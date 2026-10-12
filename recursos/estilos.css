@@ -1,5 +1,6 @@
 /* Estilos de la interfaz, del sistema de diseño de docs/diseno/README.md.
-   Ningún color se escribe fuera de los tokens. */
+   Ningún color se escribe fuera de los tokens. El tema es claro salvo que la
+   raíz lleve data-tema="oscuro", sin seguir la preferencia del sistema (D-41). */
 
 @font-face { font-family: 'Archivo'; font-style: normal; font-weight: 400 700;
   font-stretch: 62% 125%; font-display: swap; src: url(/recursos/fuentes/Archivo.woff2) format('woff2'); }
@@ -32,18 +33,6 @@
   --trama: rgba(236,233,226,.24); --velo: rgba(0,0,0,.62);
   color-scheme: dark;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
-    --papel: #161513; --superficie: #1E1D1A; --hundido: #27251F;
-    --tinta: #ECE9E2; --tinta-2: #BEB9AF; --tinta-3: #9C978D;
-    --linea: #36332D; --linea-fuerte: #7A766C;
-    --acento: #8FB2F2; --acento-suave: #1E2A42; --sobre-acento: #0F1420;
-    --error: #F09A90; --error-suave: #3A1E1B; --sobre-error: #1A0D0B;
-    --trama: rgba(236,233,226,.24); --velo: rgba(0,0,0,.62);
-    color-scheme: dark;
-  }
-}
-
 /* Base: Archivo semicondensada, cuerpo 13 px. */
 html, body { margin: 0; min-height: 100%; }
 body {

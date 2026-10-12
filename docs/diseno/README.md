@@ -88,6 +88,9 @@ repite la consecuencia. Inactivo con borde punteado y el motivo al lado. Tablas
 densas sin cebra, con números y rutas en mono a la derecha. Panel lateral de
 440 a 480 px sin velo. Barra de reproducción fija abajo del editor.
 
+**Tema.** Claro por defecto, sin seguir la preferencia del sistema (D-41). El
+oscuro solo con `data-tema="oscuro"`.
+
 **Notas para implementar.** El estado de guardado va en el encabezado con
 `role="status"`. Los 1000 segmentos se renderizan todos, sin virtualizar, con
 `content-visibility: auto`. Los atajos usan Ctrl+Alt y Esc reproduce o pausa.

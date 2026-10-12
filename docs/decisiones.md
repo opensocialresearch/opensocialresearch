@@ -6,6 +6,11 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-41.** Tema claro por defecto. Carlos pidió trabajar con el tema claro
+  por defecto. La interfaz no sigue `prefers-color-scheme` del sistema, como
+  proponían las notas del diseño, y el oscuro queda solo para cuando la raíz
+  lleve `data-tema="oscuro"`, que una elección guardada pondrá cuando exista.
+
 - **D-40.** El diseño de Claude Design se usa desde la primera página
   (SRV-04, SRV-10). Carlos pidió que la estética del proyecto de diseño
   ([docs/diseno/README.md](diseno/README.md)) se aplique desde el principio,

@@ -6,6 +6,25 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-23.** Escucha en loopback (SRV-02). `osr` pide al sistema un puerto
+  efímero en `127.0.0.1` y toma el mismo en `[::1]`, y si ese está ocupado en
+  IPv6 suelta los dos y prueba otro, hasta 10 veces. Se toma como falta de IPv6
+  de loopback que `[::1]` no exista o que el sistema no tenga IPv6. El puerto
+  se toma antes de crear el proyecto, así un arranque sin puerto libre no deja
+  nada creado ni un bloqueo huérfano. Los escenarios de red corren `osr` en un
+  espacio de nombres de usuario y de red propio, sin privilegios, con
+  `unshare` y `nsenter`, y desde ahí también la conexión de la prueba (con
+  python3) y los pedidos HTTP (con curl), porque el loopback de ese espacio no
+  se ve desde fuera y la dirección local de SRV-02.2 iría a la red real. La
+  interfaz local es una `dummy` con una dirección /32, sin ninguna ruta de
+  salida. El rango de un solo puerto es el 40000, que en un espacio propio no
+  choca con nada, y lo ocupa en `[::1]` el mismo proceso que sostiene la red.
+  El registro técnico existe desde aquí con lo mínimo que pide SRV-02.4, en
+  `<carpeta de estado>/registro.log` con permisos 0600 y líneas con marca,
+  nivel y mensaje, y anota el arranque, el puerto y si hay IPv6 de loopback. La
+  rotación, los pedidos rechazados y lo que el registro nunca contiene quedan
+  para SRV-12.
+
 - **D-22.** Arranque del servidor (SRV-01). El navegador se abre con
   `xdg-open`, sin crates nuevos, porque la v0.1 es solo para Linux. Para que
   el token no quede en los argumentos de ningún proceso (SRV-03), `xdg-open`

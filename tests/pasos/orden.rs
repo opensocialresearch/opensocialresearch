@@ -110,11 +110,10 @@ impl Mundo {
         let error = fs::File::create(salidas.path().join("error")).unwrap();
         self.salidas = Some(salidas);
         let binario = env!("CARGO_BIN_EXE_osr");
-        let mut comando = match &self.disco {
-            Some(disco) => {
-                let mut nsenter = Command::new(super::programa("nsenter"));
-                let pid = disco.id().to_string();
-                nsenter.args(["-t", &pid, "-U", "-m", "--preserve-credentials", binario]);
+        let mut comando = match self.espacio() {
+            Some(entrar) => {
+                let mut nsenter = entrar;
+                nsenter.arg(binario);
                 nsenter
             }
             None => Command::new(binario),
@@ -151,6 +150,18 @@ impl Mundo {
             std::thread::sleep(Duration::from_millis(20));
         }
         panic!("osr no terminó ni quedó listo en 10 s");
+    }
+}
+
+impl Mundo {
+    /// Arranca `osr`, anota su puerto y su token y lo cierra de forma ordenada.
+    pub(super) fn arrancar_y_cerrar(&mut self, orden: &str) {
+        self.lanzar(orden);
+        let puerto = self.puerto.expect("osr no escribió su puerto");
+        let token = self.token.clone().expect("osr no escribió su token");
+        self.anotados.push((puerto, token));
+        let codigo = terminar(self.osr.as_mut().unwrap());
+        assert_eq!(codigo, Some(0), "osr no terminó con código 0 en 3 s");
     }
 }
 

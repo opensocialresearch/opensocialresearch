@@ -10,9 +10,10 @@ mod servidor;
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use cucumber::World;
@@ -34,6 +35,8 @@ pub struct Mundo {
     codigo: Option<i32>,
     /// Proceso que sostiene el espacio de nombres del disco de prueba.
     disco: Option<Child>,
+    /// Proceso que sostiene el espacio de nombres de la red de prueba.
+    red: Option<Child>,
     /// Contenido de cada ruta tomado por «se tomó la huella».
     huellas: BTreeMap<String, Option<Vec<u8>>>,
     /// Carpetas a las que el escenario les quitó permisos.
@@ -46,6 +49,10 @@ pub struct Mundo {
     /// `{P}` y `{token}`, de la línea que escribió el último arranque.
     puerto: Option<u16>,
     token: Option<String>,
+    /// El puerto y el token de cada arranque de «osr se arranca N veces».
+    anotados: Vec<(u16, String)>,
+    /// Lo que pasó con la conexión TCP que intentó la prueba.
+    conexion: Option<String>,
     /// Si `osr` corre sin ningún navegador en el `PATH` (SRV-01.3).
     sin_navegador: bool,
     /// El pedido HTTP que arma el escenario y la respuesta que recibió.
@@ -63,12 +70,15 @@ impl Mundo {
             osr: None,
             codigo: None,
             disco: None,
+            red: None,
             huellas: BTreeMap::new(),
             restaurar_permisos: Vec::new(),
             limpiar: Vec::new(),
             aparte: aparte(),
             puerto: None,
             token: None,
+            anotados: Vec::new(),
+            conexion: None,
             sin_navegador: false,
             pedido: None,
             respuesta: None,
@@ -84,6 +94,26 @@ impl Mundo {
             ("XDG_STATE_HOME", self.aparte.path().join("estado")),
             ("PATH", self.aparte.path().join(carpeta)),
         ]
+    }
+
+    /// `nsenter` listo para correr un programa en el espacio de nombres del
+    /// disco o de la red de prueba, si el escenario preparó alguno.
+    fn espacio(&self) -> Option<Command> {
+        let (proceso, espacio) = match (&self.disco, &self.red) {
+            (Some(disco), _) => (disco, "-m"),
+            (None, Some(red)) => (red, "-n"),
+            (None, None) => return None,
+        };
+        let mut nsenter = Command::new(programa("nsenter"));
+        let pid = proceso.id().to_string();
+        nsenter.args(["-t", &pid, "-U", espacio, "--preserve-credentials"]);
+        Some(nsenter)
+    }
+
+    /// El registro técnico de `osr`, en la carpeta de estado de las pruebas.
+    fn registro_tecnico(&self) -> String {
+        fs::read_to_string(self.aparte.path().join("estado/osr/registro.log"))
+            .expect("leer el registro técnico")
     }
 
     fn tmp(&self) -> &Path {
@@ -125,9 +155,9 @@ impl Drop for Mundo {
         if let Some(mut osr) = self.osr.take() {
             orden::terminar(&mut osr);
         }
-        if let Some(mut disco) = self.disco.take() {
-            let _ = disco.kill();
-            let _ = disco.wait();
+        for mut espacio in [self.disco.take(), self.red.take()].into_iter().flatten() {
+            let _ = espacio.kill();
+            let _ = espacio.wait();
         }
         for carpeta in &self.restaurar_permisos {
             let _ = fs::set_permissions(carpeta, fs::Permissions::from_mode(0o700));
@@ -151,6 +181,32 @@ fn aparte() -> TempDir {
     fs::write(&xdg_open, guion).unwrap();
     fs::set_permissions(&xdg_open, fs::Permissions::from_mode(0o755)).unwrap();
     aparte
+}
+
+/// El final de casi todo guion de `sostener`, avisar y quedar dormido.
+const DORMIR: &str = "echo listo && exec sleep infinity";
+
+/// Lanza un proceso en un espacio de nombres de usuario propio, más los de
+/// `espacios`, que corre `guion` para sostenerlos. Así las pruebas cambian
+/// discos y redes sin privilegios. El guion escribe `listo` cuando terminó de
+/// preparar todo y después queda vivo, casi siempre con `DORMIR`.
+fn sostener(espacios: &[&str], guion: &str) -> Child {
+    let mut proceso = Command::new("unshare")
+        .args(["--user", "--map-root-user"])
+        .args(espacios)
+        .args(["sh", "-c", guion])
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("lanzar unshare");
+    let mut linea = String::new();
+    BufReader::new(proceso.stdout.take().unwrap())
+        .read_line(&mut linea)
+        .expect("leer la salida de unshare");
+    assert_eq!(
+        linea, "listo\n",
+        "no se pudo preparar el espacio de nombres"
+    );
+    proceso
 }
 
 /// La ruta de un programa en el `PATH` de las pruebas, que no es el de `osr`.

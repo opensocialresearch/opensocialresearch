@@ -66,19 +66,54 @@ fn con_token(mundo: &mut Mundo) {
     mundo.encabezado("Authorization", valor);
 }
 
+impl Pedido {
+    async fn mandar(&self) -> Respuesta {
+        let cliente = reqwest::Client::builder().no_proxy().build().unwrap();
+        let metodo = reqwest::Method::from_bytes(self.metodo.as_bytes()).expect("método HTTP");
+        let mut armado = cliente.request(metodo, &self.direccion);
+        for (nombre, valor) in &self.encabezados {
+            armado = armado.header(nombre, valor);
+        }
+        let respuesta = armado.send().await.expect("mandar el pedido");
+        Respuesta {
+            estado: respuesta.status().as_u16(),
+        }
+    }
+
+    /// Manda el pedido con curl desde la red de prueba, donde corre `osr`.
+    /// Solo trae el estado, que es lo que miran esos escenarios.
+    fn mandar_con_curl(&self, mut nsenter: std::process::Command) -> Respuesta {
+        nsenter.arg(super::programa("curl"));
+        nsenter.args([
+            "-s",
+            "-o",
+            "/dev/null",
+            "-w",
+            "%{http_code}",
+            "-X",
+            &self.metodo,
+        ]);
+        for (nombre, valor) in &self.encabezados {
+            nsenter.args(["-H", &format!("{nombre}: {valor}")]);
+        }
+        let salida = nsenter.arg(&self.direccion).output().expect("lanzar curl");
+        let estado = String::from_utf8_lossy(&salida.stdout);
+        Respuesta {
+            estado: estado
+                .parse()
+                .unwrap_or_else(|_| panic!("curl respondió {estado:?}")),
+        }
+    }
+}
+
 #[when("se manda el pedido")]
 async fn se_manda(mundo: &mut Mundo) {
     let pedido = mundo.pedido.as_ref().expect("falta «un pedido HTTP»");
-    let cliente = reqwest::Client::builder().no_proxy().build().unwrap();
-    let metodo = reqwest::Method::from_bytes(pedido.metodo.as_bytes()).expect("método HTTP");
-    let mut armado = cliente.request(metodo, &pedido.direccion);
-    for (nombre, valor) in &pedido.encabezados {
-        armado = armado.header(nombre, valor);
-    }
-    let respuesta = armado.send().await.expect("mandar el pedido");
-    mundo.respuesta = Some(Respuesta {
-        estado: respuesta.status().as_u16(),
-    });
+    let respuesta = match mundo.red.is_some().then(|| mundo.espacio()).flatten() {
+        Some(nsenter) => pedido.mandar_con_curl(nsenter),
+        None => pedido.mandar().await,
+    };
+    mundo.respuesta = Some(respuesta);
 }
 
 #[then(expr = "la respuesta tiene estado {int}")]

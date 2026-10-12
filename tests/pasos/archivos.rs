@@ -2,15 +2,13 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::process::{Command, Stdio};
 
 use cucumber::gherkin::Step;
 use cucumber::{given, then};
 
-use super::{Mundo, rutas};
+use super::{DORMIR, Mundo, rutas, sostener};
 
 fn esta_vacia(carpeta: &Path) -> bool {
     fs::read_dir(carpeta)
@@ -62,26 +60,10 @@ fn disco_de_prueba(mundo: &mut Mundo, carpeta: String, kib: u32) {
     let carpeta = mundo.ruta(&carpeta);
     fs::create_dir_all(&carpeta).expect("crear el punto de montaje");
     let montar = format!(
-        "mount -t tmpfs -o size={kib}k tmpfs '{}' && echo listo && exec sleep infinity",
+        "mount -t tmpfs -o size={kib}k tmpfs '{}' && {DORMIR}",
         carpeta.display()
     );
-    let mut disco = Command::new("unshare")
-        .args([
-            "--user",
-            "--map-root-user",
-            "--mount",
-            "--propagation",
-            "private",
-        ])
-        .args(["sh", "-c", &montar])
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("lanzar unshare");
-    let mut linea = String::new();
-    BufReader::new(disco.stdout.take().unwrap())
-        .read_line(&mut linea)
-        .expect("leer la salida de unshare");
-    assert_eq!(linea, "listo\n", "no se pudo montar el disco de prueba");
+    let disco = sostener(&["--mount", "--propagation", "private"], &montar);
     mundo.disco = Some(disco);
 }
 

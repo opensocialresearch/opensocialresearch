@@ -292,7 +292,8 @@ flujos centrales.
 Aquí va lo que depende de tener la v1.0 estable o de decisiones todavía
 abiertas, que es la colaboración P2P con Automerge e iroh, los permisos por
 proyecto, la codificación en equipo y el acuerdo entre codificadores, la
-aplicación móvil de campo, los conectores a repositorios de datos, el cómputo
+aplicación móvil de campo, la conexión con el repositorio de datos públicos,
+que es un proyecto aparte, el cómputo
 externo, macOS, la bóveda con contraseña para los datos sin anonimizar junto
 con la preparación de la versión censurada antes del análisis y la guía de
 los lineamientos de la PRODHAB, la IA para codificación y clasificación, el análisis de corpus
@@ -778,15 +779,16 @@ la de un posgrado grande, 50 entrevistas de 90 minutos y 300 códigos.
 | QualCoder | Lectura en R de las tablas de segmentos exportadas en CSV, solo si se activa el plan B | Validación de la exportación `.qdpx` | Importación de su proyecto por `.qdpx` |
 | REFI-QDA | Ninguna | Exportar e importar libro de códigos `.qdc` y exportar proyecto `.qdpx` (REFI-QDA, 2019), validado contra QualCoder y al menos una herramienta comercial | Importar proyectos `.qdpx` completos |
 | Archivo y depósito | Ninguna | Paquete RO-Crate de la zona compartible (Soiland-Reyes et al., 2022), con verificación previa de identificadores | Depósito directo en Zenodo o Dataverse con llave propia, metadatos DDI-Codebook 2.5 (DDI Alliance, 2014) |
-| Repositorios de datos | Descarga manual con ficha de procedencia | Ninguna | Conector NADA de solo lectura con DDI-Codebook para el INEC, luego CKAN y Dataverse |
+| Repositorio de datos públicos | Descarga manual con ficha de procedencia | Descarga manual con ficha de procedencia | Conexión con el repositorio curado de bases públicas de Costa Rica, un proyecto aparte |
 | IA | Ninguna | Asistente de código en notebooks con compuerta de salida, si el autor o una colega piloto lo usan en una investigación real | Codificación asistida, contraste crítico, resúmenes, clasificación |
 | Cómputo externo | Ninguna | Ninguna | Clúster por SSH o nube con llave propia, con resultados que traen su manifiesto |
 
-Los conectores entran de a uno por versión y solo por protocolo, empezando por
-NADA, que es el de más valor para la investigación social costarricense. El de
-NADA guarda junto a cada base sus términos de uso, en especial la prohibición
-de reidentificar que traen los microdatos del INEC, y deja la aceptación de
-términos y la descarga restringida en manos de la persona.
+La herramienta no mantiene conectores con cada fuente de datos. Reunir, curar
+y documentar bases públicas de Costa Rica, con sus términos de uso, como la
+prohibición de reidentificar que traen los microdatos del INEC, es el trabajo
+de un repositorio aparte, un proyecto distinto en el que la gente puede pedir
+bases y colaborar. Cuando exista, la herramienta se conectará solo con ese
+repositorio.
 
 ### Dependencias externas
 
@@ -1253,7 +1255,7 @@ Estas no son de software, pero cuestan nada ahora y mucho después.
 | Asistente de IA en notebooks | v1.0, solo si alguien lo usa en una investigación real | La revisión de experiencia de usuario lo dejaba para después |
 | Importar `.qdpx` completo | Después, con las tablas CSV de QualCoder como puente del plan B | La revisión cualitativa lo pedía en v1.0 para quien migra con una tesis empezada, y otra salida era un importador mínimo de QualCoder en la v1.0 |
 | Codificación en equipo y acuerdo | Después | La revisión cualitativa la pedía en v1.0 |
-| Conector NADA del INEC | Después | Las revisiones de metodología cuantitativa y de ciencia abierta lo pedían en v1.0 |
+| Bases de datos públicas | Proyecto aparte, un repositorio curado con el que la herramienta se conectará después (decisión del autor del 2026-10-11) | Las revisiones de metodología cuantitativa y de ciencia abierta pedían un conector NADA del INEC en v1.0 |
 | Visor de mapas | v1.0 importante | La revisión de SIG lo pedía importante, la de arquitectura lo dejaba para después |
 | Digitalizar la hoja de mapa en la app | Después | La revisión de SIG la pedía en v1.0, la de arquitectura la ponía fuera de alcance, y depende de si las colegas saben QGIS |
 | Presentación conjunta | v1.0 deseable, como plantilla de Quarto | La revisión de docencia la pedía importante, la de metodología cuantitativa la dejaba para después |

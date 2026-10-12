@@ -118,12 +118,13 @@ Todo llega al mismo proyecto, audios, transcripciones, documentos, tablas,
 capas geográficas, imágenes y textos de prensa o redes, con su origen y su
 estado de anonimización.
 
-Además de los datos propios, la herramienta conecta con repositorios de datos
-abiertos para explorar qué bases existen y pueden servir a la investigación,
-como los microdatos de las encuestas del INEC, portales de datos abiertos del
-Estado y repositorios académicos. Se puede buscar por tema, ver las variables
-de una base antes de descargarla, y traerla al proyecto con su ficha y su
-cita.
+Las bases de datos públicas tienen su propio proyecto, aparte de esta
+herramienta. Será un repositorio que reúne y cura bases de datos públicas de
+Costa Rica útiles para la investigación social, donde la gente puede pedir
+bases nuevas y colaborar. Cuando exista, la herramienta se conectará solo con
+ese repositorio, en lugar de mantener conectores con cada fuente de datos.
+Mientras tanto, una base externa entra al proyecto como cualquier archivo, con
+su ficha y su cita.
 
 ### 6. Transcripción
 
@@ -182,9 +183,8 @@ entrevistas, los audios y los datos de las personas participantes se quedan
 en la máquina de quien investiga.
 
 La fuerza está en las integraciones. Desde la herramienta se conectan, cuando
-se quieren, servicios para buscar bibliografía, repositorios de datos
-abiertos, modelos de inteligencia artificial locales o en la nube, y cómputo
-externo, como el clúster de una
+se quieren, servicios para buscar bibliografía, modelos de inteligencia
+artificial locales o en la nube, y cómputo externo, como el clúster de una
 universidad o un servicio de nube que se paga aparte, para correr lo que la
 computadora propia no puede. Quien investiga pone su llave de acceso y decide
 qué se manda afuera.
@@ -244,12 +244,6 @@ Elegida para que corra en computadoras modestas y para usar lo que ya existe.
 - **whisper.cpp para transcribir** en la propia computadora, con el tamaño de
   modelo que la máquina aguante.
 - **La API local de Zotero** para buscar, citar y agregar referencias.
-- **Catálogos de datos por protocolo, no por sitio.** Muchos repositorios usan
-  el mismo programa o el mismo estándar de metadatos, así que un conector sirve
-  para muchos. El archivo de microdatos del INEC funciona con NADA, el
-  catálogo que usan varias oficinas de estadística, y describe sus encuestas
-  con el estándar DDI. Muchos portales de datos abiertos usan CKAN y muchos
-  repositorios universitarios usan Dataverse.
 
 ## Licencia
 

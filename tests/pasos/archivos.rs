@@ -398,7 +398,14 @@ fn reemplaza_linea(mundo: &mut Mundo, numero: usize, texto: String) {
     });
 }
 
-#[given(r#"con la app cerrada se borra el archivo "proyecto.toml""#)]
-fn borra_proyecto_toml(mundo: &mut Mundo) {
-    fs::remove_file(proyecto_toml(mundo).0).expect("borrar proyecto.toml");
+// Solo `proyecto.toml` y los archivos de la carpeta de una entrevista (D-20).
+#[given(
+    regex = r#"^con la app cerrada se borra el archivo "(proyecto\.toml|identificable/entrevistas/[A-Z0-9]+/[^"/]+)"$"#
+)]
+fn borra_archivo(mundo: &mut Mundo, archivo: String) {
+    let ruta = mundo.ruta(&archivo);
+    fs::remove_file(&ruta).unwrap_or_else(|e| panic!("borrar {}: {e}", ruta.display()));
 }
+
+#[given("no hay ninguna preparación adicional")]
+fn sin_preparacion(_mundo: &mut Mundo) {}

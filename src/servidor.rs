@@ -1,17 +1,18 @@
 //! El servidor local: rutas, Host, origen, token y encabezados de todas las
-//! respuestas (SRV-01, SRV-05 a SRV-10).
+//! respuestas (SRV-01, SRV-05 a SRV-11).
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use axum::Router;
-use axum::extract::{Request, State};
-use axum::http::{HeaderValue, Method, StatusCode, header};
+use axum::extract::{self, Request, State};
+use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{MethodFilter, MethodRouter, on};
 
 use crate::rutas::RUTAS;
-use crate::{registro, token};
+use crate::{audio, registro, token};
 
 /// La pantalla sin proyecto, con `Abrir proyecto` y `Crear proyecto`.
 const INICIO: &str = include_str!("inicio.html");
@@ -64,6 +65,8 @@ struct Sesion {
     /// Dónde se anota cada pedido rechazado, el registro técnico salvo en
     /// las pruebas unitarias, que no escriben en la carpeta de estado.
     anotar: fn(&str, &str),
+    /// La carpeta del proyecto abierto, si hay uno.
+    proyecto: Option<Arc<Path>>,
 }
 
 /// Un Host propio es `127.0.0.1:P`, `[::1]:P` o `localhost:P`, sin
@@ -204,10 +207,25 @@ async fn inicio() -> Html<&'static str> {
     Html(INICIO)
 }
 
+/// El audio de una entrevista del proyecto abierto, con el `Range` del
+/// pedido (SRV-11).
+fn audio(proyecto: Option<Arc<Path>>, filtro: MethodFilter) -> MethodRouter {
+    on(
+        filtro,
+        move |extract::Path(entrevista): extract::Path<String>, encabezados: HeaderMap| async move {
+            let rango = encabezados
+                .get(header::RANGE)
+                .and_then(|valor| valor.to_str().ok());
+            audio::servir(proyecto.as_deref(), &entrevista, rango).await
+        },
+    )
+}
+
 /// El manejador de un camino de `RUTAS` para un método.
-fn atender(camino: &str, filtro: MethodFilter) -> MethodRouter {
+fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter {
     match camino {
         "/" => on(filtro, inicio),
+        "/audio/{entrevista}" => audio(sesion.proyecto.clone(), filtro),
         otro => panic!("la ruta {otro} de RUTAS no tiene manejador"),
     }
 }
@@ -216,11 +234,12 @@ fn atender(camino: &str, filtro: MethodFilter) -> MethodRouter {
 /// `RUTAS`. La capa que valida el pedido va al final, así cubre también las
 /// rutas inexistentes, que con token dan 404, y la de los encabezados de
 /// SRV-09 la envuelve, así llegan también a los 401, 403, 404 y 405.
-pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
+pub fn rutas(token: Arc<str>, puerto: u16, proyecto: Option<PathBuf>) -> Router {
     rutas_con(Sesion {
         token,
         puerto,
         anotar: registro::anotar,
+        proyecto: proyecto.map(Arc::from),
     })
 }
 
@@ -230,7 +249,7 @@ fn rutas_con(sesion: Sesion) -> Router {
         for metodo in ruta.metodos {
             let metodo = Method::from_bytes(metodo.as_bytes()).expect("método de RUTAS");
             let filtro = MethodFilter::try_from(metodo).expect("método de RUTAS");
-            router = router.route(ruta.camino, atender(ruta.camino, filtro));
+            router = router.route(ruta.camino, atender(ruta.camino, filtro, &sesion));
         }
     }
     router
@@ -257,12 +276,22 @@ mod pruebas {
         ANOTADO.with(|anotado| anotado.borrow_mut().push(format!("{nivel} {mensaje}")));
     }
 
-    fn servidor() -> Router {
+    /// El proyecto de prueba de PRY-17, que estas pruebas solo leen.
+    fn datos() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/datos/proyecto")
+    }
+
+    fn servidor_con(proyecto: Option<PathBuf>) -> Router {
         rutas_con(Sesion {
             token: Arc::from(TOKEN),
             puerto: PUERTO,
             anotar: anotar_en_memoria,
+            proyecto: proyecto.map(Arc::from),
         })
+    }
+
+    fn servidor() -> Router {
+        servidor_con(Some(datos()))
     }
 
     async fn estado(pedido: axum::http::request::Builder) -> StatusCode {
@@ -400,7 +429,7 @@ mod pruebas {
     async fn cada_ruta_de_la_lista_atiende_sus_metodos_con_token() {
         for ruta in RUTAS {
             for metodo in ruta.metodos {
-                let pedido = get(ruta.camino)
+                let pedido = get(&camino_concreto(ruta.camino))
                     .method(*metodo)
                     .header("Authorization", format!("Bearer {TOKEN}"));
                 let estado = estado(pedido).await;
@@ -709,6 +738,87 @@ mod pruebas {
     #[test]
     #[should_panic(expected = "no tiene manejador")]
     fn una_ruta_sin_manejador_no_arranca() {
-        let _ = atender("/sin-manejador", MethodFilter::GET);
+        let sesion = Sesion {
+            token: Arc::from(TOKEN),
+            puerto: PUERTO,
+            anotar: anotar_en_memoria,
+            proyecto: None,
+        };
+        let _ = atender("/sin-manejador", MethodFilter::GET, &sesion);
+    }
+
+    /// Un camino concreto para un patrón de axum, con `E01` en cada segmento
+    /// variable, como lo arma la prueba de SRV-10.
+    fn camino_concreto(patron: &str) -> String {
+        patron
+            .split('/')
+            .map(|parte| if parte.starts_with('{') { "E01" } else { parte })
+            .collect::<Vec<_>>()
+            .join("/")
+    }
+
+    async fn con_token(router: Router, pedido: axum::http::request::Builder) -> Response {
+        let pedido = pedido.header("Authorization", format!("Bearer {TOKEN}"));
+        router
+            .oneshot(pedido.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn el_audio_se_sirve_con_el_rango_del_pedido() {
+        let original =
+            std::fs::read(datos().join("identificable/entrevistas/E01/E01.ogg")).unwrap();
+        let respuesta =
+            con_token(servidor(), get("/audio/E01").header("Range", "bytes=0-99")).await;
+        assert_eq!(respuesta.status(), StatusCode::PARTIAL_CONTENT);
+        tiene_los_siete(&respuesta);
+        let cuerpo = axum::body::to_bytes(respuesta.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        assert_eq!(cuerpo, original[..100]);
+        let respuesta = con_token(servidor(), get("/audio/E01")).await;
+        assert_eq!(respuesta.status(), StatusCode::OK);
+        let cuerpo = axum::body::to_bytes(respuesta.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        assert_eq!(cuerpo, original);
+    }
+
+    #[tokio::test]
+    async fn el_audio_atiende_head_sin_cuerpo() {
+        let respuesta = con_token(servidor(), get("/audio/E01").method("HEAD")).await;
+        assert_eq!(respuesta.status(), StatusCode::OK);
+        assert_eq!(encabezado(&respuesta, header::CONTENT_TYPE), "audio/ogg");
+        assert_eq!(encabezado(&respuesta, header::CONTENT_LENGTH), "230848");
+        assert!(texto(respuesta).await.is_empty());
+        let sin_token = get("/audio/E01").method("HEAD");
+        assert_eq!(estado(sin_token).await, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn sin_proyecto_el_audio_no_existe() {
+        let respuesta = con_token(servidor_con(None), get("/audio/E01")).await;
+        assert_eq!(respuesta.status(), StatusCode::NOT_FOUND);
+        tiene_los_siete(&respuesta);
+        assert_eq!(texto(respuesta).await, r#"{"error":"no_existe"}"#);
+    }
+
+    #[tokio::test]
+    async fn un_camino_que_sale_del_proyecto_no_existe() {
+        for camino in [
+            "/audio/..",
+            "/audio/%2E%2E",
+            "/audio/..%2F..%2Fproyecto.toml",
+            "/audio/e01",
+        ] {
+            let respuesta = con_token(servidor(), get(camino)).await;
+            assert_eq!(respuesta.status(), StatusCode::NOT_FOUND, "{camino}");
+            assert_eq!(
+                texto(respuesta).await,
+                r#"{"error":"no_existe"}"#,
+                "{camino}"
+            );
+        }
     }
 }

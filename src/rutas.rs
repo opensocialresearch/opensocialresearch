@@ -12,7 +12,16 @@ pub struct Ruta {
 }
 
 /// Todas las rutas que atiende el servidor.
-pub const RUTAS: &[Ruta] = &[Ruta {
-    camino: "/",
-    metodos: &["GET"],
-}];
+///
+/// `/audio/{entrevista}` declara solo GET: el servidor atiende HEAD con el
+/// mismo manejador, sin cuerpo (D-39).
+pub const RUTAS: &[Ruta] = &[
+    Ruta {
+        camino: "/",
+        metodos: &["GET"],
+    },
+    Ruta {
+        camino: "/audio/{entrevista}",
+        metodos: &["GET"],
+    },
+];

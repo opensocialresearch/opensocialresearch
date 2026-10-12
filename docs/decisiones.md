@@ -6,6 +6,65 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-39.** Audio con pedidos por rangos (SRV-11). `GET /audio/{entrevista}`
+  entra en `src/rutas.rs` y con eso en las baterías de SRV-05.1, SRV-08.1 y
+  SRV-10. Se escribe a mano y no con `ServeFile` de tower-http, que no es
+  dependencia del programa y con la función `fs` sumaría tokio-util,
+  http-range-header, mime_guess y httpdate, y que además responde a
+  `If-Modified-Since` con 304 y pone `Last-Modified`, cosas que la
+  especificación no pide, elige el tipo por la extensión con mime_guess en
+  lugar de la tabla de SRV-11, no pone `Content-Disposition` y da sus errores
+  sin el cuerpo JSON. Se agrega solo `futures-util`, sin funciones por
+  defecto, que ya se compilaba porque lo usa axum. El archivo se lee por
+  trozos de 64 KiB con `try_unfold` sobre un `tokio::fs::File`, así un
+  pedido en curso no pesa más que un trozo (SRV-16), y la respuesta lleva
+  `Content-Length` explícito. Si el archivo se acorta mientras se manda, el
+  cuerpo termina con error y la conexión se corta, en lugar de rellenar.
+  Se atienden `Range: bytes=a-b`, con `b` recortado al último byte, y
+  `bytes=a-`, que son los que mandan los reproductores. Si `a` es mayor o
+  igual que el tamaño, la respuesta es 416 con `Content-Range: bytes
+  */<tamaño>` (RFC 9110). El rango final `bytes=-n`, varios rangos, `b < a`,
+  otra unidad o un valor que no se entiende se ignoran y la respuesta es el
+  200 entero, como permite RFC 9110, porque la especificación no los pide y
+  no hace falta armar respuestas `multipart/byteranges`. El orden de las
+  comprobaciones es este. Un `<entrevista>` que no cumple el seudónimo de
+  PAR-01, `^[A-Z][A-Z0-9]{1,15}$`, da 404 `no_existe`, así ningún `..`,
+  `/` ni camino codificado sale de `identificable/entrevistas/`. La
+  entrevista existe si su carpeta tiene `entrevista.toml` (TRA-01). Su audio
+  es el de la ficha `<id>.<ext>.ficha.toml` de PRY-07, buscada con las cinco
+  extensiones de TRA-02, y el `Content-Type` sale de esa extensión con la
+  tabla de SRV-11. La ficha es la que dice si hay audio, porque sigue ahí
+  cuando el original falta o se eliminó. Una ficha con `estado =
+  "eliminado"` da 410 `audio_eliminado`, porque PRY-07 define ese estado y
+  TRA-23.4 pide justo esa respuesta, y si no, un original que no se puede
+  abrir o que no es un archivo da 404 `audio_faltante`, también cuando el
+  motivo es un permiso y no la falta. Queda como pregunta para el autor una
+  entrevista sin ficha de audio, que la especificación no cubre y que hoy
+  responde 404 `no_existe`, porque el recurso pedido no existe. Sin proyecto
+  abierto toda entrevista da `no_existe`. La ruta declara solo GET, aunque la
+  tabla de SRV-10 dice GET y HEAD, porque axum atiende HEAD con el manejador
+  de GET y hyper quita el cuerpo, y si la lista dijera HEAD, el 401 sin
+  cuerpo de un HEAD no podría cumplir «el cuerpo de cada respuesta de las
+  demás familias es una página HTML» de SRV-05.1, que HTTP prohíbe en un
+  HEAD. Una prueba unitaria comprueba que HEAD responde 200 con el
+  `Content-Length` y sin cuerpo, y 401 sin token. En los pasos, la respuesta
+  guarda también los bytes del cuerpo, porque el texto pierde los bytes del
+  audio que no son UTF-8, y la huella del cuerpo se compara byte a byte con
+  el original, igual que «se tomó la huella». Se amplían, acotadas, las
+  capturas de «un pedido HTTP» a `/audio/<seudónimo>`, de «el pedido lleva el
+  encabezado» a `Range`, de «la respuesta tiene estado» a 206 y 416, de «con
+  la app cerrada se borra el archivo» a los archivos de una entrevista, y se
+  definen `{tamaño de E01.ogg}`, del proyecto copiado, y «no hay ninguna
+  preparación adicional». El 410 no se agrega a «la respuesta tiene estado»,
+  porque los dos escenarios que lo piden empiezan con «el audio de E02 está
+  eliminado según TRA-23», que queda sin definir hasta TRA-23 junto con los
+  ocho ejemplos de SRV-09.1 (D-33). Por ese ejemplo el esquema `@PRY-18.1`
+  de la Regla no puede pasar la corrida estricta, así que, siguiendo D-24 y
+  D-33, las barandas se corrieron con `@SRV-11 and not @PRY-18.1`, y el
+  esquema se corrió aparte con `@SRV-11 and @PRY-18.1` sin modo estricto, con
+  dos ejemplos que pasan, `no_existe` y `audio_faltante`, y el de TRA-23
+  omitido. La familia `/respaldo/` de PAR-08 no se implementa todavía.
+
 - **D-38.** Copia del proyecto de prueba (PRY-17). «Una copia del proyecto
   de prueba» ya no crea un proyecto vacío con `osr nuevo`, copia
   `tests/datos/proyecto/` a `{proyecto}` y le devuelve lo que git no guarda.

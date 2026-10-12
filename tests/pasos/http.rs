@@ -24,7 +24,10 @@ pub struct Pedido {
 pub struct Respuesta {
     pub estado: u16,
     pub encabezados: Vec<(String, String)>,
+    /// El cuerpo como texto, con los bytes que no son UTF-8 reemplazados.
     pub cuerpo: String,
+    /// El cuerpo tal como llegó, para comparar audio byte a byte (SRV-11).
+    pub bytes: Vec<u8>,
 }
 
 impl Respuesta {
@@ -59,10 +62,10 @@ impl Mundo {
     }
 }
 
-// Solo los caminos de las familias que ya existen, la entrada y una ruta
-// inexistente. Los de `/audio/` y `/respaldo/` quedan sin definir hasta SRV-11
-// y PAR-08 (D-20).
-#[given(regex = r#"^un pedido HTTP ([A-Z]+) a "(/|/\?token=[^"]*|/no-existe)"$"#)]
+// Solo los caminos de las familias que ya existen, la entrada, una ruta
+// inexistente y el audio de una entrevista. Los de `/respaldo/` quedan sin
+// definir hasta PAR-08 (D-20).
+#[given(regex = r#"^un pedido HTTP ([A-Z]+) a "(/|/\?token=[^"]*|/no-existe|/audio/[A-Z0-9]+)"$"#)]
 fn pedido_a(mundo: &mut Mundo, metodo: String, camino: String) {
     let direccion = mundo.direccion(&camino);
     mundo.nuevo_pedido(&metodo, direccion);
@@ -123,10 +126,13 @@ impl Pedido {
             .iter()
             .map(|(n, v)| (n.as_str().to_string(), v.to_str().unwrap_or("").to_string()))
             .collect();
+        let estado = respuesta.status().as_u16();
+        let bytes = respuesta.bytes().await.expect("leer el cuerpo").to_vec();
         Respuesta {
-            estado: respuesta.status().as_u16(),
+            estado,
             encabezados,
-            cuerpo: respuesta.text().await.expect("leer el cuerpo"),
+            cuerpo: String::from_utf8_lossy(&bytes).into_owned(),
+            bytes,
         }
     }
 
@@ -165,6 +171,7 @@ impl Pedido {
                 .map(|(n, v)| (n.to_ascii_lowercase(), v.to_string()))
                 .collect(),
             cuerpo: cuerpo.to_string(),
+            bytes: cuerpo.as_bytes().to_vec(),
         }
     }
 
@@ -192,14 +199,15 @@ impl Pedido {
                 .unwrap_or_else(|_| panic!("curl respondió {estado:?}")),
             encabezados: Vec::new(),
             cuerpo: String::new(),
+            bytes: Vec::new(),
         }
     }
 }
 
 // Solo los encabezados que el servidor ya mira, el token, la cookie, el Host,
-// el Origin y Sec-Fetch-Site. Range queda sin definir hasta SRV-11 (D-20).
+// el Origin, Sec-Fetch-Site y Range (D-20).
 #[given(
-    regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie|Host|Origin|Sec-Fetch-Site)" con valor "([^"]*)"$"#
+    regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie|Host|Origin|Sec-Fetch-Site|Range)" con valor "([^"]*)"$"#
 )]
 fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
     let valor = mundo.resolver(&valor);
@@ -238,9 +246,9 @@ async fn se_manda(mundo: &mut Mundo) {
     mundo.respuesta = Some(respuesta);
 }
 
-// Solo los estados que el servidor ya produce. Los 206 y 416 llegan con
-// SRV-11, y sus escenarios quedan omitidos (D-20).
-#[then(regex = r"^la respuesta tiene estado (200|401|403|404|405)$")]
+// Solo los estados que el servidor ya produce y alguna prueba puede pedir. El
+// 410 espera al paso de TRA-23 que elimina el audio (D-20, D-39).
+#[then(regex = r"^la respuesta tiene estado (200|206|401|403|404|405|416)$")]
 fn estado_es(mundo: &mut Mundo, estado: u16) {
     let respuesta = mundo
         .respuesta
@@ -312,4 +320,36 @@ async fn mismo_estado(mundo: &mut Mundo) {
         .clone()
         .expect("falta guardar el estado");
     assert_eq!(interfaz(mundo).await, guardado);
+}
+
+/// Los bytes de un archivo de la carpeta de una entrevista del proyecto.
+fn de_la_entrevista(mundo: &Mundo, ruta: &str) -> Vec<u8> {
+    let ruta = mundo.ruta(ruta);
+    std::fs::read(&ruta).unwrap_or_else(|e| panic!("leer {}: {e}", ruta.display()))
+}
+
+// Solo archivos de la carpeta de una entrevista (D-20).
+#[then(
+    regex = r#"^el cuerpo de la respuesta tiene (\d+) bytes idénticos a los primeros (\d+) bytes de "(identificable/entrevistas/[A-Z0-9]+/[^"/]+)"$"#
+)]
+fn cuerpo_igual_al_principio(mundo: &mut Mundo, largo: usize, primeros: usize, ruta: String) {
+    assert_eq!(largo, primeros, "el escenario compara largos distintos");
+    let original = de_la_entrevista(mundo, &ruta);
+    let cuerpo = &mundo.la_respuesta().bytes;
+    assert_eq!(cuerpo.len(), largo);
+    assert_eq!(cuerpo[..], original[..largo]);
+}
+
+/// La huella es el contenido entero, como en «se tomó la huella»: comparar
+/// los bytes es más estricto que comparar un resumen.
+#[then(
+    regex = r#"^la huella del cuerpo de la respuesta es igual a la de "(identificable/entrevistas/[A-Z0-9]+/[^"/]+)"$"#
+)]
+fn huella_del_cuerpo(mundo: &mut Mundo, ruta: String) {
+    let original = de_la_entrevista(mundo, &ruta);
+    assert!(!original.is_empty());
+    assert!(
+        mundo.la_respuesta().bytes == original,
+        "el cuerpo no es el original"
+    );
 }

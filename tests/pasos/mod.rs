@@ -190,6 +190,13 @@ impl Mundo {
             texto = texto.replace("{P}", &puerto.to_string());
             texto = texto.replace("{token}", token);
         }
+        if texto.contains("{tamaño de E01.ogg}") {
+            let audio = self.proyecto.join("identificable/entrevistas/E01/E01.ogg");
+            let tamano = fs::metadata(&audio)
+                .expect("leer el tamaño de E01.ogg")
+                .len();
+            texto = texto.replace("{tamaño de E01.ogg}", &tamano.to_string());
+        }
         texto = texto.replace("{tmp}", &self.tmp().to_string_lossy());
         texto.replace("{proyecto}", &self.proyecto.to_string_lossy())
     }

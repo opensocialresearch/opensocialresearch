@@ -6,6 +6,17 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-32.** Sin CORS (SRV-08). No hace falta código, porque el servidor no
+  tiene ninguna capa de CORS, una verificación previa desde otro origen ya
+  recibe el 403 de SRV-07 y un `OPTIONS` autenticado desde el origen propio
+  recibe de axum el 405 con `Allow`. El commit suma solo los pasos de
+  SRV-08.1. La verificación previa se manda una vez a cada camino de la
+  lista, aunque el camino acepte varios métodos, porque `OPTIONS` no depende
+  del método de la ruta y repetirla daría la misma respuesta. «Ninguna
+  respuesta tiene un encabezado que empiece con» compara el nombre sin
+  distinguir mayúsculas y falla si no hay respuestas que revisar. SRV-08.2 es
+  del recorrido completo (D-21).
+
 - **D-31.** Validación de Origin y de Sec-Fetch-Site (SRV-07). Las tres
   reglas corren en la capa de SRV-06, después del Host y antes del token, y
   el 403 lleva el cuerpo JSON en todas las familias. El `Origin` se compara

@@ -344,6 +344,52 @@ async fn a_cada_ruta(mundo: &mut Mundo, nombre: String, valor: String) {
     }
 }
 
+/// La verificación previa de CORS desde otro origen, a cada camino de la
+/// lista (SRV-08.1).
+#[when(
+    regex = r#"^se manda a cada ruta de la lista un pedido OPTIONS con "(Origin)" con valor "([^"]+)" y "(Access-Control-Request-Method)" con valor "([^"]+)"$"#
+)]
+async fn verificacion_previa(
+    mundo: &mut Mundo,
+    origen: String,
+    valor_origen: String,
+    metodo: String,
+    valor_metodo: String,
+) {
+    mundo.respuestas.clear();
+    let caminos: BTreeSet<String> = mundo
+        .lista_de_rutas
+        .iter()
+        .map(|(_, c)| c.clone())
+        .collect();
+    for camino in caminos {
+        let respuesta = Pedido::nuevo("OPTIONS", mundo.direccion(&camino))
+            .con_encabezado(&origen, &valor_origen)
+            .con_encabezado(&metodo, &valor_metodo)
+            .mandar()
+            .await;
+        mundo.respuestas.push((camino, respuesta));
+    }
+}
+
+#[then(expr = "ninguna respuesta tiene un encabezado que empiece con {string}")]
+fn ninguna_con_el_prefijo(mundo: &mut Mundo, prefijo: String) {
+    assert!(
+        !mundo.respuestas.is_empty(),
+        "no hay respuestas que revisar"
+    );
+    let prefijo = prefijo.to_ascii_lowercase();
+    for (camino, respuesta) in &mundo.respuestas {
+        let con_prefijo: Vec<&String> = respuesta
+            .encabezados
+            .iter()
+            .map(|(nombre, _)| nombre)
+            .filter(|nombre| nombre.starts_with(&prefijo))
+            .collect();
+        assert!(con_prefijo.is_empty(), "{camino}: {con_prefijo:?}");
+    }
+}
+
 #[then(expr = "cada respuesta tiene estado {int}")]
 fn cada_estado(mundo: &mut Mundo, estado: u16) {
     for (camino, respuesta) in &mundo.respuestas {

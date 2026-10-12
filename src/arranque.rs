@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 
 use crate::cierre::{self, Cierre, Senales};
 use crate::escucha::{self, Escucha};
-use crate::{navegador, nuevo, registro, servidor, token};
+use crate::{abrir, navegador, nuevo, registro, servidor, token};
 
 /// Atiende con `rutas` en un socket ya abierto, en segundo plano, hasta que
 /// `cerrando` cambie. Entonces deja de aceptar y termina lo que tiene en curso.
@@ -71,13 +71,39 @@ fn anotar_escucha(escucha: &Escucha) {
     }
 }
 
-/// Corre `osr` hasta SIGINT o SIGTERM. Con `crear` primero crea el proyecto
-/// según PRY-01.
+/// Qué hace `osr` antes de levantar el servidor.
+#[derive(Debug)]
+pub enum Accion<'a> {
+    /// Sin proyecto, la pantalla de inicio (SRV-01).
+    Inicio,
+    /// Crear un proyecto con su nombre opcional (PRY-01).
+    Nuevo(&'a Path, Option<&'a str>),
+    /// Abrir un proyecto existente (PRY-04).
+    Abrir(&'a Path),
+}
+
+/// Crea o abre el proyecto de `accion` y devuelve su carpeta, o el mensaje
+/// y el código de salida del error.
+fn preparar<'a>(accion: &Accion<'a>) -> Result<Option<&'a Path>, (String, i32)> {
+    let momento = nuevo::Momento::ahora();
+    match *accion {
+        Accion::Inicio => Ok(None),
+        Accion::Nuevo(ruta, nombre) => nuevo::crear(ruta, nombre, &momento)
+            .map(|()| Some(ruta))
+            .map_err(|error| (error.to_string(), error.codigo())),
+        Accion::Abrir(ruta) => abrir::abrir(ruta, &momento)
+            .map(|()| Some(ruta))
+            .map_err(|error| (error.to_string(), error.codigo())),
+    }
+}
+
+/// Corre `osr` hasta SIGINT o SIGTERM, después de crear o abrir el proyecto
+/// de `accion`.
 ///
 /// Las señales se registran antes de crear, para que una señal que llega
 /// apenas existe el bloqueo ya encuentre quién la atienda. El puerto se toma
 /// antes de crear, así, si no hay puerto libre, no queda nada creado.
-pub async fn correr(crear: Option<(&Path, Option<&str>)>, sin_navegador: bool) -> ExitCode {
+pub async fn correr(accion: Accion<'_>, sin_navegador: bool) -> ExitCode {
     let mut senales = Senales::registrar();
     let Some(escucha) = escucha::escuchar() else {
         registro::anotar("error", "sin puerto libre en las direcciones locales");
@@ -85,12 +111,13 @@ pub async fn correr(crear: Option<(&Path, Option<&str>)>, sin_navegador: bool) -
         return ExitCode::from(5);
     };
     anotar_escucha(&escucha);
-    if let Some((ruta, nombre)) = crear
-        && let Err(error) = nuevo::crear(ruta, nombre, &nuevo::Momento::ahora())
-    {
-        eprintln!("osr: {error}");
-        return ExitCode::from(error.codigo() as u8);
-    }
+    let proyecto = match preparar(&accion) {
+        Ok(proyecto) => proyecto,
+        Err((mensaje, codigo)) => {
+            eprintln!("osr: {mensaje}");
+            return ExitCode::from(codigo as u8);
+        }
+    };
     let token: Arc<str> = token::nuevo().expect("leer /dev/urandom").into();
     let rutas = servidor::rutas(token.clone());
     let (cerrando, aviso) = watch::channel(());
@@ -102,6 +129,6 @@ pub async fn correr(crear: Option<(&Path, Option<&str>)>, sin_navegador: bool) -
         navegador::abrir(&direccion);
     }
     senales.recibir().await;
-    let bloqueo = crear.map(|(ruta, _)| ruta.join(".osr/bloqueo"));
+    let bloqueo = proyecto.map(|ruta| ruta.join(".osr/bloqueo"));
     cerrar(&mut senales, cerrando, servidores, bloqueo).await
 }

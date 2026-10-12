@@ -18,11 +18,12 @@ fn esta_vacia(carpeta: &Path) -> bool {
 }
 
 /// Los datos de prueba de PRY-17 todavía no existen, así que por ahora el
-/// proyecto de prueba es uno recién creado en `{proyecto}`, que crea el paso
-/// «osr está corriendo con el proyecto abierto» (D-25).
+/// proyecto de prueba es uno vacío, creado en `{proyecto}` con `osr nuevo` y
+/// cerrado de forma ordenada (D-27).
 #[given("una copia del proyecto de prueba")]
 fn copia_del_proyecto(mundo: &mut Mundo) {
     assert!(!mundo.proyecto.exists());
+    mundo.crear_cerrado();
 }
 
 #[given("se tomó la huella de cada archivo del proyecto")]

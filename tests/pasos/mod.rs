@@ -34,6 +34,11 @@ pub struct Mundo {
     salidas: Option<TempDir>,
     /// El proceso `osr` lanzado por el último «se ejecuta».
     osr: Option<Child>,
+    /// Los procesos `osr` que seguían corriendo cuando se lanzó otro, del
+    /// más viejo al más nuevo, para no perderlos ni dejarlos vivos.
+    anteriores: Vec<Child>,
+    /// El cuerpo de la interfaz que guardó «se guarda el estado que muestra la app».
+    estado_guardado: Option<String>,
     /// Código de salida de `osr`, cuando ya terminó.
     codigo: Option<i32>,
     /// Proceso que sostiene el espacio de nombres del disco de prueba.
@@ -85,6 +90,8 @@ impl Mundo {
             tmp,
             salidas: None,
             osr: None,
+            anteriores: Vec::new(),
+            estado_guardado: None,
             codigo: None,
             disco: None,
             red: None,
@@ -185,7 +192,7 @@ impl Drop for Mundo {
             seguir.store(false, std::sync::atomic::Ordering::Relaxed);
             let _ = hilo.join();
         }
-        if let Some(mut osr) = self.osr.take() {
+        for mut osr in self.osr.take().into_iter().chain(self.anteriores.drain(..)) {
             orden::terminar(&mut osr);
         }
         for mut espacio in [self.disco.take(), self.red.take()].into_iter().flatten() {

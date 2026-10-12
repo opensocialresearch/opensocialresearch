@@ -76,21 +76,49 @@ herramienta hace queda anotado aparte, en `registro.jsonl`.
 
 /// Una línea del registro de eventos, con las claves en el orden de PRY-08.
 #[derive(Serialize)]
-struct Evento<'a> {
+struct Evento<'a, D: Serialize> {
     fecha: &'a str,
     tipo: &'a str,
-    detalle: serde_json::Map<String, serde_json::Value>,
+    detalle: D,
+}
+
+/// Una línea del registro de eventos con su salto final.
+fn evento(fecha: &str, tipo: &str, detalle: impl Serialize) -> String {
+    let evento = Evento {
+        fecha,
+        tipo,
+        detalle,
+    };
+    let linea = serde_json::to_string(&evento).expect("un evento siempre se puede escribir");
+    format!("{linea}\n")
 }
 
 /// La línea `proyecto_creado` del registro de eventos, con su salto final.
 pub fn evento_creado(fecha: &str) -> String {
-    let evento = Evento {
-        fecha,
-        tipo: "proyecto_creado",
-        detalle: serde_json::Map::new(),
-    };
-    let linea = serde_json::to_string(&evento).expect("un evento siempre se puede escribir");
-    format!("{linea}\n")
+    evento(fecha, "proyecto_creado", serde_json::Map::new())
+}
+
+/// El detalle del evento `verificacion`, con las claves en el orden de PRY-11.
+#[derive(Serialize, Default)]
+struct Verificacion {
+    modificados_fuera: Vec<String>,
+    con_error: Vec<String>,
+    faltantes: Vec<String>,
+    originales_alterados: Vec<String>,
+    no_registrados: u64,
+    temporales_eliminados: u64,
+}
+
+/// La línea `verificacion` de una apertura. Hasta PRY-11 la verificación no
+/// revisa nada y el detalle sale con las listas vacías y los contadores en
+/// cero (D-27).
+pub fn evento_verificacion(fecha: &str) -> String {
+    evento(fecha, "verificacion", Verificacion::default())
+}
+
+/// `.osr/bloqueo`, con el número del proceso y su inicio (PRY-05).
+pub fn bloqueo(pid: u32, inicio: &str) -> String {
+    format!("pid = {pid}\ninicio = {inicio}\n")
 }
 
 /// `README.md` de un proyecto recién creado (PRY-16).
@@ -233,6 +261,24 @@ mod pruebas {
         assert_eq!(
             evento_creado("2026-10-11T21:30:05-06:00"),
             "{\"fecha\":\"2026-10-11T21:30:05-06:00\",\"tipo\":\"proyecto_creado\",\"detalle\":{}}\n"
+        );
+    }
+
+    #[test]
+    fn evento_verificacion_tiene_el_detalle_de_pry_11_en_orden() {
+        assert_eq!(
+            evento_verificacion("2026-10-12T05:00:00-06:00"),
+            "{\"fecha\":\"2026-10-12T05:00:00-06:00\",\"tipo\":\"verificacion\",\"detalle\":\
+             {\"modificados_fuera\":[],\"con_error\":[],\"faltantes\":[],\"originales_alterados\":[],\
+             \"no_registrados\":0,\"temporales_eliminados\":0}}\n"
+        );
+    }
+
+    #[test]
+    fn bloqueo_tiene_pid_e_inicio() {
+        assert_eq!(
+            bloqueo(42, "2026-10-12T05:00:00-06:00"),
+            "pid = 42\ninicio = 2026-10-12T05:00:00-06:00\n"
         );
     }
 

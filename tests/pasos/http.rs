@@ -205,3 +205,28 @@ fn estado_es(mundo: &mut Mundo, estado: u16) {
         .expect("falta «se manda el pedido»");
     assert_eq!(respuesta.estado, estado);
 }
+
+/// Lo que muestra la app es, hasta la vista «Resumen del proyecto», la
+/// interfaz que sirve `GET /` con el token de la sesión (D-27).
+async fn interfaz(mundo: &Mundo) -> String {
+    let respuesta = Pedido::nuevo("GET", mundo.direccion("/"))
+        .con_encabezado("Authorization", &format!("Bearer {}", mundo.token_valido()))
+        .mandar()
+        .await;
+    assert_eq!(respuesta.estado, 200);
+    respuesta.cuerpo
+}
+
+#[when("se guarda el estado que muestra la app")]
+async fn guarda_el_estado(mundo: &mut Mundo) {
+    mundo.estado_guardado = Some(interfaz(mundo).await);
+}
+
+#[then("la app muestra el mismo estado que el guardado")]
+async fn mismo_estado(mundo: &mut Mundo) {
+    let guardado = mundo
+        .estado_guardado
+        .clone()
+        .expect("falta guardar el estado");
+    assert_eq!(interfaz(mundo).await, guardado);
+}

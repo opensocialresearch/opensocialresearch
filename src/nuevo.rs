@@ -50,7 +50,7 @@ impl Error {
 }
 
 /// El motivo de un error de escritura en español, sin el texto del sistema.
-fn motivo(error: &io::Error) -> &'static str {
+pub fn motivo(error: &io::Error) -> &'static str {
     match error.kind() {
         io::ErrorKind::PermissionDenied => "sin permiso de escritura",
         io::ErrorKind::StorageFull => "el disco está lleno",
@@ -141,7 +141,7 @@ fn carpeta(ruta: &Path) -> io::Result<()> {
 }
 
 /// Escribe un archivo gestionado con permisos 0600 sin importar la umask.
-fn archivo(ruta: &Path, contenido: &str) -> io::Result<()> {
+pub fn archivo(ruta: &Path, contenido: &str) -> io::Result<()> {
     fs::write(ruta, contenido)?;
     fs::set_permissions(ruta, fs::Permissions::from_mode(0o600))
 }
@@ -194,7 +194,7 @@ fn armar(raiz: &Path, nombre: &str, momento: &Momento) -> io::Result<()> {
     indice(&raiz.join(".osr/indice.sqlite"))?;
     archivo(
         &raiz.join(".osr/bloqueo"),
-        &format!("pid = {}\ninicio = {}\n", std::process::id(), momento.marca),
+        &plantillas::bloqueo(std::process::id(), &momento.marca),
     )
 }
 

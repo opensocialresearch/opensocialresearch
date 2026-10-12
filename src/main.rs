@@ -1,5 +1,6 @@
 //! `osr`, el programa de Open Social Research.
 
+mod abrir;
 mod arranque;
 mod cierre;
 mod escucha;
@@ -20,10 +21,12 @@ use clap::{Parser, Subcommand};
 
 /// Herramienta libre de investigación social aplicada.
 #[derive(Parser)]
-#[command(name = "osr", version)]
+#[command(name = "osr", version, args_conflicts_with_subcommands = true)]
 struct Cli {
     #[command(subcommand)]
     orden: Option<Orden>,
+    /// Carpeta de un proyecto para abrir, igual que `osr abrir` (PRY-04).
+    ruta: Option<PathBuf>,
     /// No abre el navegador (SRV-01).
     #[arg(long, global = true)]
     sin_navegador: bool,
@@ -31,6 +34,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Orden {
+    /// Abre un proyecto existente (PRY-04).
+    Abrir {
+        /// Carpeta del proyecto.
+        ruta: PathBuf,
+    },
     /// Crea un proyecto vacío y lo abre (PRY-01).
     Nuevo {
         /// Carpeta del proyecto, nueva o vacía.
@@ -69,11 +77,18 @@ async fn main() -> ExitCode {
             None => error.exit(),
         },
     };
-    let nuevo = cli
-        .orden
-        .as_ref()
-        .map(|Orden::Nuevo { ruta, nombre }| (ruta.as_path(), nombre.as_deref()));
-    arranque::correr(nuevo, cli.sin_navegador).await
+    arranque::correr(accion(&cli), cli.sin_navegador).await
+}
+
+/// Qué tiene que hacer `osr` según la línea de órdenes.
+fn accion(cli: &Cli) -> arranque::Accion<'_> {
+    match (&cli.orden, &cli.ruta) {
+        (Some(Orden::Nuevo { ruta, nombre }), _) => {
+            arranque::Accion::Nuevo(ruta, nombre.as_deref())
+        }
+        (Some(Orden::Abrir { ruta }), _) | (None, Some(ruta)) => arranque::Accion::Abrir(ruta),
+        (None, None) => arranque::Accion::Inicio,
+    }
 }
 
 #[cfg(test)]
@@ -94,10 +109,31 @@ mod pruebas {
             "osr: no se reconoce --opcion-falsa. Las órdenes son osr, osr abrir <carpeta> y osr nuevo <carpeta>."
         );
         assert!(
-            mensaje(&["osr", "borrar"])
+            mensaje(&["osr", "abrir", "x", "--borrar"])
                 .unwrap()
-                .starts_with("osr: no se reconoce borrar.")
+                .starts_with("osr: no se reconoce --borrar.")
         );
+    }
+
+    fn accion_de(argumentos: &[&str]) -> String {
+        let cli = Cli::try_parse_from(argumentos).unwrap();
+        format!("{:?}", accion(&cli))
+    }
+
+    /// Una palabra suelta es la ruta de un proyecto, como `osr abrir` (PRY-04).
+    #[test]
+    fn osr_con_una_ruta_es_lo_mismo_que_osr_abrir() {
+        assert_eq!(accion_de(&["osr", "estudio"]), r#"Abrir("estudio")"#);
+        assert_eq!(
+            accion_de(&["osr", "abrir", "estudio"]),
+            r#"Abrir("estudio")"#
+        );
+        assert_eq!(
+            accion_de(&["osr", "nuevo", "x", "--nombre", "y"]),
+            r#"Nuevo("x", Some("y"))"#
+        );
+        assert_eq!(accion_de(&["osr"]), "Inicio");
+        assert!(Cli::try_parse_from(["osr", "estudio", "nuevo"]).is_err());
     }
 
     #[test]

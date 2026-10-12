@@ -102,8 +102,10 @@ impl Mundo {
         let partes = dividir(orden);
         assert_eq!(partes[0], "osr", "la orden tiene que empezar con osr");
         let argumentos: Vec<String> = partes[1..].iter().map(|p| self.resolver(p)).collect();
-        if argumentos.first().map(String::as_str) == Some("nuevo") {
-            self.proyecto = PathBuf::from(&argumentos[1]);
+        if let [orden, ruta, ..] = argumentos.as_slice()
+            && ["nuevo", "abrir"].contains(&orden.as_str())
+        {
+            self.proyecto = PathBuf::from(ruta);
         }
         let salidas = tempfile::tempdir().expect("crear la carpeta de salidas");
         let estandar = fs::File::create(salidas.path().join("estandar")).unwrap();
@@ -127,7 +129,11 @@ impl Mundo {
             .stderr(error)
             .spawn()
             .expect("lanzar osr");
-        self.osr = Some(osr);
+        if let Some(mut anterior) = self.osr.replace(osr)
+            && anterior.try_wait().unwrap().is_none()
+        {
+            self.anteriores.push(anterior);
+        }
         self.codigo = None;
         self.esperar_listo();
     }
@@ -163,12 +169,24 @@ impl Mundo {
         let codigo = terminar(self.osr.as_mut().unwrap());
         assert_eq!(codigo, Some(0), "osr no terminó con código 0 en 3 s");
     }
+
+    /// Crea `{proyecto}` con `osr nuevo` y lo cierra de forma ordenada, así
+    /// queda en el disco como lo deja la app cerrada.
+    pub(super) fn crear_cerrado(&mut self) {
+        let proyecto = self.proyecto.to_string_lossy().into_owned();
+        self.lanzar(&format!("osr nuevo \"{proyecto}\" --sin-navegador"));
+        let mut osr = self.osr.take().expect("falta osr");
+        assert_eq!(terminar(&mut osr), Some(0), "osr nuevo no cerró en orden");
+    }
 }
 
-// Solo existen `osr` y `osr nuevo`; con otras órdenes, como `osr abrir`, el
-// paso queda sin definir y sus escenarios cuentan como omitidos en vez de
-// fallar (D-20). Quien implemente otra orden amplía esta captura.
-#[when(regex = r"^se ejecuta `(osr(?: nuevo .*| --sin-navegador| --opcion-falsa)?)`$")]
+// Solo las órdenes que existen, `osr`, `osr nuevo`, `osr abrir` y `osr
+// <ruta>` con el proyecto del escenario; con otras el paso queda sin definir
+// y sus escenarios cuentan como omitidos en vez de fallar (D-20). Quien
+// implemente otra orden amplía esta captura.
+#[when(
+    regex = r"^se ejecuta `(osr(?: nuevo .*| abrir .*| \{proyecto\}.*| --sin-navegador| --opcion-falsa)?)`$"
+)]
 fn se_ejecuta(mundo: &mut Mundo, orden: String) {
     mundo.lanzar(&orden);
 }
@@ -181,12 +199,11 @@ fn se_cierra(mundo: &mut Mundo) {
     mundo.codigo = codigo;
 }
 
-/// Hasta que existan PRY-04 y los datos de PRY-17, el proyecto se abre
-/// creándolo con `osr nuevo`, que lo deja abierto igual (D-25).
+/// Abre con `osr abrir` el proyecto que ya preparó el escenario (D-27).
 #[given("osr está corriendo con el proyecto abierto")]
 fn corre_con_el_proyecto(mundo: &mut Mundo) {
     let proyecto = mundo.proyecto.to_string_lossy().into_owned();
-    mundo.lanzar(&format!("osr nuevo \"{proyecto}\" --sin-navegador"));
+    mundo.lanzar(&format!("osr abrir \"{proyecto}\" --sin-navegador"));
     esta_corriendo(mundo);
 }
 
@@ -202,7 +219,9 @@ fn esta_corriendo(mundo: &mut Mundo) {
     );
 }
 
-#[then(expr = "el código de salida es {int}")]
+// Solo los códigos que `osr` ya produce. El 4 del bloqueo llega con PRY-05 y
+// su escenario queda omitido hasta entonces (D-20).
+#[then(regex = r"^el código de salida es (2|3|5|6)$")]
 fn codigo_es(mundo: &mut Mundo, codigo: i32) {
     assert_eq!(mundo.codigo_de_salida(), codigo);
 }

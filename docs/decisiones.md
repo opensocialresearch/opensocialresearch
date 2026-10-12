@@ -6,6 +6,36 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-27.** Abrir un proyecto (PRY-04). `osr abrir <ruta>` y `osr <ruta>` son
+  la misma acción, así que una palabra suelta después de `osr` es la ruta de
+  un proyecto, `osr borrar` intenta abrir la carpeta `borrar` y el mensaje de
+  orden desconocida de SRV-01 queda para las opciones, como `--opcion-falsa`.
+  La prueba unitaria que pedía ese mensaje para `osr borrar` pasa a pedirlo
+  para una opción. Abrir comprueba que la ruta sea una carpeta, toma el
+  bloqueo, anota `verificacion` y levanta el servidor, y la validación de
+  `proyecto.toml` llega con PRY-03 y la revisión del bloqueo existente con
+  PRY-05. La verificación al abrir es PRY-11, así que hasta entonces el evento
+  `verificacion` sale con el detalle de PRY-11 en su orden, con las listas
+  vacías y los contadores en cero, sin haber revisado nada, y PRY-11 lo llena.
+  El README no se regenera al abrir todavía, porque regenerarlo sin la regla
+  de edición a mano de PRY-16 pisaría los cambios de la persona sin guardarlos
+  aparte, y ningún escenario de PRY-04 lo verifica, llega con PRY-16. Si al
+  abrir no se puede escribir el bloqueo o el registro de eventos, `osr`
+  termina con código 6 y `osr: no se pudo abrir el proyecto en <ruta>
+  (<motivo>).`, por analogía con la tabla de PRY-01, porque la especificación
+  no fija ese caso, y queda como pregunta para el autor. Las líneas del
+  registro de eventos se agregan al final y se llevan a disco una por una,
+  como pide PRY-12. En PRY-04.1 el estado que muestra la app es, hasta la
+  vista «Resumen del proyecto», el cuerpo de `GET /` con el token de la
+  sesión. En los pasos, «una copia del proyecto de prueba» ahora crea un
+  proyecto vacío con `osr nuevo` y lo cierra en orden, y «osr está corriendo
+  con el proyecto abierto» lo abre con `osr abrir`, en lugar de lo que fijó
+  D-25, hasta que PRY-17 traiga los datos de prueba. «Se ejecuta» captura
+  también `osr abrir` y `osr <ruta>`, con lo que SRV-03.2 corre y pasa, y «el
+  código de salida es» captura solo los códigos que `osr` ya produce, para que
+  el 4 de PRY-05.1 quede omitido hasta PRY-05 (D-20). PRY-04.2 es `@interfaz`
+  y necesita las entrevistas de PRY-17, así que queda omitido.
+
 - **D-26.** Cierre ordenado (SRV-15). Con la primera SIGINT o SIGTERM los
   servidores dejan de aceptar conexiones y terminan los pedidos en curso, con
   una espera de 2 s como máximo para que todo el cierre quepa en los 3 s. Después

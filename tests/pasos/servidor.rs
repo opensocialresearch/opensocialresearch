@@ -629,3 +629,94 @@ fn lineas_con_detalle(mundo: &mut Mundo) {
         );
     }
 }
+
+// Solo XDG_STATE_HOME, la única variable que `osr` lee hoy (D-20).
+#[given(regex = r#"^la variable de entorno "(XDG_STATE_HOME)" vale "([^"]+)"$"#)]
+fn variable_de_entorno(mundo: &mut Mundo, _nombre: String, valor: String) {
+    mundo.xdg_state_home = Some(mundo.resolver(&valor).into());
+}
+
+#[given(regex = r"^la umask del proceso osr es ([0-7]{3})$")]
+fn con_umask(mundo: &mut Mundo, umask: String) {
+    mundo.umask = Some(umask);
+}
+
+// Solo la carpeta de estado y el registro técnico; los permisos de lo que
+// está dentro del proyecto llegan con SRV-13 (D-20).
+#[then(regex = r#"^los permisos de "(\{tmp\}/estado/osr(?:/registro\.log)?)" son (0[0-7]{3})$"#)]
+fn permisos_de(mundo: &mut Mundo, ruta: String, modo: String) {
+    use std::os::unix::fs::PermissionsExt;
+    let ruta = mundo.ruta(&ruta);
+    let esperado = u32::from_str_radix(&modo, 8).unwrap();
+    let modo = fs::metadata(&ruta)
+        .unwrap_or_else(|e| panic!("leer {}: {e}", ruta.display()))
+        .permissions()
+        .mode();
+    assert_eq!(modo & 0o777, esperado, "{}", ruta.display());
+}
+
+/// Cuántos pedidos van a la vez, cada uno por su conexión keep-alive.
+const CONEXIONES: usize = 8;
+
+/// Un camino de 200 caracteres distinto para cada `i`.
+fn camino_de_200(i: usize) -> String {
+    let camino = format!("/{i:0>199}");
+    assert_eq!(camino.chars().count(), 200);
+    camino
+}
+
+#[when("se mandan 300.000 pedidos sin token a caminos distintos de 200 caracteres")]
+async fn pedidos_sin_token(mundo: &mut Mundo) {
+    const PEDIDOS: usize = 300_000;
+    let base = mundo.direccion("");
+    let cliente = reqwest::Client::builder().no_proxy().build().unwrap();
+    let mut tareas = tokio::task::JoinSet::new();
+    for primero in 0..CONEXIONES {
+        let (cliente, base) = (cliente.clone(), base.clone());
+        tareas.spawn(async move {
+            for i in (primero..PEDIDOS).step_by(CONEXIONES) {
+                let respuesta = cliente
+                    .get(format!("{base}{}", camino_de_200(i)))
+                    .send()
+                    .await
+                    .expect("mandar el pedido");
+                assert_eq!(respuesta.status().as_u16(), 401);
+                respuesta.bytes().await.expect("leer el cuerpo");
+            }
+        });
+    }
+    while let Some(tarea) = tareas.join_next().await {
+        tarea.expect("una conexión de la prueba falló");
+    }
+}
+
+/// Los archivos de la carpeta de estado que empiezan con `registro.log`.
+fn archivos_del_registro(mundo: &Mundo) -> BTreeSet<String> {
+    fs::read_dir(mundo.carpeta_de_estado())
+        .expect("leer la carpeta de estado")
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .filter(|nombre| nombre.starts_with("registro.log"))
+        .collect()
+}
+
+#[then(
+    r#"en la carpeta de estado solo existen "registro.log" y "registro.log.1" como archivos del registro técnico"#
+)]
+fn solo_los_dos_registros(mundo: &mut Mundo) {
+    let esperados = BTreeSet::from(["registro.log".to_string(), "registro.log.1".to_string()]);
+    assert_eq!(archivos_del_registro(mundo), esperados);
+}
+
+#[then(r#"los tamaños de "registro.log" y "registro.log.1" suman 10.000.000 bytes o menos"#)]
+fn suman_a_lo_sumo(mundo: &mut Mundo) {
+    let carpeta = mundo.carpeta_de_estado();
+    let suma: u64 = ["registro.log", "registro.log.1"]
+        .iter()
+        .map(|nombre| {
+            fs::metadata(carpeta.join(nombre))
+                .expect("leer el tamaño")
+                .len()
+        })
+        .sum();
+    assert!(suma <= 10_000_000, "suman {suma} bytes");
+}

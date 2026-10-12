@@ -6,6 +6,40 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-36.** Prueba de la rotación y de la umask (SRV-12). Los 300.000
+  pedidos de SRV-12.2 salen por ocho conexiones keep-alive de un solo cliente,
+  cada una con su parte en orden, porque abrir una conexión por pedido deja
+  decenas de miles de puertos en TIME_WAIT y la prueba se traba. Cada camino
+  es `/` seguido del número del pedido con ceros a la izquierda hasta 200
+  caracteres, y cada respuesta tiene que ser 401. Para que el escenario tarde
+  menos de medio minuto y no un minuto y cuarto, el perfil de desarrollo
+  compila las dependencias con `opt-level = 2` y sin información de
+  depuración, que nadie usa en ellas y que agranda la compilación, y el
+  código de `osr` sigue sin optimizar, así la cobertura y la mutación miden
+  lo mismo que antes. La
+  umask de SRV-12.3, de PRY-15.2 y de SRV-13.1 se fija lanzando `osr` con un
+  `sh` que la cambia y después lo reemplaza con `exec`, así no hace falta
+  `libc` en las pruebas y el proceso sigue siendo el mismo. Los pasos de la
+  variable de entorno y de los permisos se acotan a `XDG_STATE_HOME` y a la
+  carpeta de estado y su registro, y los permisos de lo que hay dentro del
+  proyecto quedan para SRV-13.
+
+- **D-35.** Recorte y rotación del registro técnico (SRV-12). Los 200
+  caracteres de un camino rechazado se cuentan como caracteres Unicode, no
+  como bytes, y el corte cae siempre entre dos caracteres, sin marca de que
+  hubo recorte. Se recorta el camino tal como llega, sin la consulta, y solo
+  en las líneas de pedidos rechazados. La rotación cuenta los bytes de la
+  línea completa con su salto y rota cuando el archivo pasaría de 5.000.000,
+  no cuando llega justo a esa cifra. Las escrituras pasan de a una por un
+  candado del proceso, porque con dos pedidos rechazados a la vez los dos
+  podrían ver el mismo tamaño y pasar juntos el límite. Si el renombre falla,
+  la línea no se escribe, para no pasar el límite. Una línea que sola no cabe
+  en 5.000.000 bytes se recorta hasta caber, también sin partir caracteres,
+  así la suma de los dos archivos nunca pasa de 10.000.000 bytes. La carpeta
+  de estado y el registro ya quedaban en 0700 y 0600 con cualquier umask,
+  porque se les fijan los permisos después de crearlos, y SRV-12.3 lo
+  confirma con 000, 022 y 077.
+
 - **D-34.** Familias de rutas y prueba de cobertura total (SRV-10). La
   lista de `src/rutas.rs` sigue siendo la única fuente, la arman el servidor
   y la prueba, y hoy tiene solo `GET /`. Las familias `/recursos/`, `/api/`,

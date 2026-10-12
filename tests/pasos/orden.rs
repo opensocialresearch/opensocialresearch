@@ -112,13 +112,25 @@ impl Mundo {
         let error = fs::File::create(salidas.path().join("error")).unwrap();
         self.salidas = Some(salidas);
         let binario = env!("CARGO_BIN_EXE_osr");
+        // Con umask, `osr` se lanza con un sh que la fija y después lo
+        // reemplaza con exec, así el proceso sigue siendo el mismo.
+        let mut programa: Vec<std::ffi::OsString> = Vec::new();
+        if let Some(umask) = &self.umask {
+            programa.push(super::programa("sh").into());
+            programa.push("-c".into());
+            programa.push(format!("umask {umask} && exec \"$0\" \"$@\"").into());
+        }
+        programa.push(binario.into());
         let mut comando = match self.espacio() {
-            Some(entrar) => {
-                let mut nsenter = entrar;
-                nsenter.arg(binario);
+            Some(mut nsenter) => {
+                nsenter.args(&programa);
                 nsenter
             }
-            None => Command::new(binario),
+            None => {
+                let mut comando = Command::new(&programa[0]);
+                comando.args(&programa[1..]);
+                comando
+            }
         };
         let osr = comando
             .args(&argumentos)

@@ -85,6 +85,10 @@ pub struct Mundo {
     /// Cada pedido de la batería de SRV-10, con su factor inválido, su
     /// método, su camino y la respuesta.
     bateria: Vec<servidor::Disparo>,
+    /// `XDG_STATE_HOME` de `osr` si el escenario la fija; si no, va en `aparte`.
+    xdg_state_home: Option<PathBuf>,
+    /// La umask con la que se lanza `osr`, en octal, si el escenario la fija.
+    umask: Option<String>,
 }
 
 impl Mundo {
@@ -120,6 +124,8 @@ impl Mundo {
             bateria: Vec::new(),
             senal_enviada: None,
             lineas_del_registro: 0,
+            xdg_state_home: None,
+            umask: None,
         }
     }
 
@@ -128,8 +134,12 @@ impl Mundo {
     /// o nada si el escenario pide que no haya navegador.
     fn entorno(&self) -> [(&'static str, PathBuf); 2] {
         let carpeta = if self.sin_navegador { "vacia" } else { "bin" };
+        let estado = self.xdg_state_home.clone();
         [
-            ("XDG_STATE_HOME", self.aparte.path().join("estado")),
+            (
+                "XDG_STATE_HOME",
+                estado.unwrap_or_else(|| self.aparte.path().join("estado")),
+            ),
             ("PATH", self.aparte.path().join(carpeta)),
         ]
     }
@@ -148,9 +158,16 @@ impl Mundo {
         Some(nsenter)
     }
 
-    /// El registro técnico de `osr`, en la carpeta de estado de las pruebas.
+    /// La carpeta de estado de `osr`, la de las pruebas salvo que el
+    /// escenario fije `XDG_STATE_HOME`.
+    fn carpeta_de_estado(&self) -> PathBuf {
+        let [(_, xdg), _] = self.entorno();
+        xdg.join("osr")
+    }
+
+    /// El registro técnico de `osr`, en su carpeta de estado.
     fn registro_tecnico(&self) -> String {
-        fs::read_to_string(self.aparte.path().join("estado/osr/registro.log"))
+        fs::read_to_string(self.carpeta_de_estado().join("registro.log"))
             .expect("leer el registro técnico")
     }
 

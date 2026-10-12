@@ -176,9 +176,10 @@ fn rechazo(pedido: &Request, sesion: &Sesion) -> Option<(&'static str, Response)
 }
 
 /// La línea del registro técnico de un pedido rechazado, con el camino sin
-/// la consulta, para que nunca quede el token de la entrada (SRV-10, SRV-12).
+/// la consulta, para que nunca quede el token de la entrada, y recortado a
+/// 200 caracteres (SRV-10, SRV-12).
 fn linea_de_rechazo(pedido: &Request, estado: StatusCode, motivo: &str) -> String {
-    let camino = pedido.uri().path();
+    let camino = registro::recortar(pedido.uri().path(), registro::CAMINO_MAXIMO);
     let estado = estado.as_u16();
     format!(
         "pedido rechazado {} {camino} {estado} {motivo}",
@@ -685,6 +686,23 @@ mod pruebas {
                 "aviso pedido rechazado GET /api/x 403 host_no_permitido",
                 "aviso pedido rechazado DELETE /api/x 403 origen_no_permitido",
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn el_camino_de_un_rechazo_se_recorta_a_200_caracteres() {
+        ANOTADO.with(|anotado| anotado.borrow_mut().clear());
+        let camino = format!("/{}", "a".repeat(250));
+        servidor()
+            .oneshot(get(&camino).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let recortado = &camino[..200];
+        assert_eq!(
+            ANOTADO.with(|anotado| anotado.borrow().clone()),
+            [format!(
+                "aviso pedido rechazado GET {recortado} 401 no_autorizado"
+            )]
         );
     }
 

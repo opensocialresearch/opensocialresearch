@@ -35,3 +35,7 @@ epistemologías.
 Recién creado (2026-10-11). Por ahora solo la visión, desarrollada en
 [VISION.md](VISION.md), con los principios, el ciclo de investigación que
 cubre y las decisiones que siguen abiertas.
+
+## Licencia
+
+[MIT](LICENSE).

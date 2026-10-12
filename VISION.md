@@ -139,12 +139,15 @@ Por ahora la usa una sola persona. La meta es que después sea útil para otras
 investigadoras e investigadores, en universidades, organizaciones y equipos
 pequeños.
 
+## Licencia
+
+El código se publica con licencia MIT. Cualquiera puede usarlo, modificarlo,
+redistribuirlo o incorporarlo a otro software, también cerrado, con la única
+condición de conservar el aviso de copyright y la licencia. Se eligió así para
+que la herramienta llegue lo más lejos posible.
+
 ## Decisiones abiertas
 
-- **Licencia.** Sin licencia el código no es libre aunque el repositorio sea
-  público. Las opciones principales son AGPL-3.0, que obliga a que cualquier
-  copia ofrecida como servicio web siga siendo abierta, y MIT o Apache-2.0, que
-  permiten cualquier uso y buscan la máxima adopción.
 - **Tecnología** de la web, de la aplicación móvil y del motor de análisis.
 - **Dónde viven los datos**, en la computadora de quien investiga, en un
   servidor propio o en ambos con sincronización.

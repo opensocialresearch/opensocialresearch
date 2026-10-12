@@ -196,23 +196,14 @@ impl Pedido {
     }
 }
 
-// Solo los encabezados que el servidor ya mira, el token, la cookie y el Host,
-// más el Origin propio. Range, Sec-Fetch-Site y los Origin ajenos quedan sin
-// definir hasta SRV-07 y SRV-11 (D-20).
+// Solo los encabezados que el servidor ya mira, el token, la cookie, el Host,
+// el Origin y Sec-Fetch-Site. Range queda sin definir hasta SRV-11 (D-20).
 #[given(
-    regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie|Host)" con valor "([^"]*)"$"#
+    regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie|Host|Origin|Sec-Fetch-Site)" con valor "([^"]*)"$"#
 )]
 fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
     let valor = mundo.resolver(&valor);
     mundo.encabezado(&nombre, valor);
-}
-
-#[given(
-    regex = r#"^el pedido lleva el encabezado "Origin" con valor "(http://127\.0\.0\.1:\{P\})"$"#
-)]
-fn con_origen_propio(mundo: &mut Mundo, valor: String) {
-    let valor = mundo.resolver(&valor);
-    mundo.encabezado("Origin", valor);
 }
 
 #[given(r#"el pedido no lleva el encabezado "Host""#)]

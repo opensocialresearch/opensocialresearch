@@ -1,4 +1,4 @@
-//! El servidor local: rutas, Host y token (SRV-01, SRV-05, SRV-06).
+//! El servidor local: rutas, Host, origen y token (SRV-01, SRV-05 a SRV-07).
 
 use std::sync::Arc;
 
@@ -26,6 +26,10 @@ const NO_AUTORIZADO_API: &str =
 const HOST_NO_PERMITIDO: &str =
     r#"{"error":"host_no_permitido","mensaje":"El pedido no viene de esta computadora."}"#;
 
+/// El cuerpo del 403 por un pedido que viene de otra página (SRV-07).
+const ORIGEN_NO_PERMITIDO: &str =
+    r#"{"error":"origen_no_permitido","mensaje":"El pedido viene de otra página."}"#;
+
 /// Lo que el servidor necesita saber de su arranque para validar un pedido.
 #[derive(Clone)]
 struct Sesion {
@@ -44,6 +48,38 @@ fn host_propio(host: Option<&str>, puerto: u16) -> bool {
     })
 }
 
+/// Un origen propio es `http://127.0.0.1:P`, `http://[::1]:P` o
+/// `http://localhost:P`, tal como lo serializa el navegador (SRV-07).
+fn origen_propio(origen: &str, puerto: u16) -> bool {
+    ["127.0.0.1", "[::1]", "localhost"]
+        .iter()
+        .any(|propio| origen == format!("http://{propio}:{puerto}"))
+}
+
+/// El valor de un encabezado como texto, vacío si no es ASCII visible.
+fn valor<'a>(pedido: &'a Request, nombre: &str) -> Option<&'a str> {
+    let valor = pedido.headers().get(nombre)?;
+    Some(valor.to_str().unwrap_or(""))
+}
+
+/// Las tres reglas de SRV-07. Un `Origin` tiene que ser propio, un método
+/// que no es GET ni HEAD tiene que traerlo, y `Sec-Fetch-Site` tiene que ser
+/// `same-origin` o `none`, salvo en la entrada con `?token=` cuando el
+/// navegador navega hasta ella.
+fn origen_permitido(pedido: &Request, puerto: u16) -> bool {
+    let lectura = matches!(*pedido.method(), Method::GET | Method::HEAD);
+    let origen = match valor(pedido, "origin") {
+        Some(origen) => origen_propio(origen, puerto),
+        None => lectura,
+    };
+    let navega = entrada(pedido).is_some() && valor(pedido, "sec-fetch-mode") == Some("navigate");
+    let sitio = match valor(pedido, "sec-fetch-site") {
+        Some(sitio) => ["same-origin", "none"].contains(&sitio) || navega,
+        None => true,
+    };
+    origen && sitio
+}
+
 /// Un 403 con su cuerpo JSON, en todas las familias.
 fn prohibido(cuerpo: &'static str) -> Response {
     let tipo = [(header::CONTENT_TYPE, "application/json")];
@@ -57,6 +93,13 @@ fn token_de_la_consulta(consulta: &str) -> Option<&str> {
         .find_map(|par| par.strip_prefix("token="))
 }
 
+/// El token que trae la entrada `GET /?token=<token>`, si el pedido es ella.
+fn entrada(pedido: &Request) -> Option<&str> {
+    (pedido.method() == Method::GET && pedido.uri().path() == "/")
+        .then(|| pedido.uri().query().and_then(token_de_la_consulta))
+        .flatten()
+}
+
 /// Un pedido está autenticado si trae el token en `Authorization: Bearer`,
 /// o si es la entrada `GET /?token=<token>`, la única que lo lleva en el
 /// camino (SRV-05). La cookie de sesión llega con SRV-04.
@@ -66,10 +109,7 @@ fn autenticado(pedido: &Request, token: &str) -> bool {
         .get(header::AUTHORIZATION)
         .and_then(|valor| valor.to_str().ok())
         .and_then(|valor| valor.strip_prefix("Bearer "));
-    let entrada = (pedido.method() == Method::GET && pedido.uri().path() == "/")
-        .then(|| pedido.uri().query().and_then(token_de_la_consulta))
-        .flatten();
-    [portador, entrada]
+    [portador, entrada(pedido)]
         .into_iter()
         .flatten()
         .any(|traido| token::iguales(traido, token))
@@ -91,7 +131,8 @@ fn no_autorizado(camino: &str) -> Response {
 }
 
 /// Rechaza el pedido antes de llegar a la ruta, sin ejecutar nada ni leer
-/// ningún archivo. Primero el Host (SRV-06), después el token (SRV-05).
+/// ningún archivo. Primero el Host (SRV-06), después el origen (SRV-07) y
+/// al final el token (SRV-05).
 async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next) -> Response {
     let host = pedido
         .headers()
@@ -99,6 +140,9 @@ async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next)
         .and_then(|valor| valor.to_str().ok());
     if !host_propio(host, sesion.puerto) {
         return prohibido(HOST_NO_PERMITIDO);
+    }
+    if !origen_permitido(&pedido, sesion.puerto) {
+        return prohibido(ORIGEN_NO_PERMITIDO);
     }
     if !autenticado(&pedido, &sesion.token) {
         return no_autorizado(pedido.uri().path());
@@ -203,7 +247,9 @@ mod pruebas {
     async fn el_token_en_la_consulta_solo_vale_en_la_entrada() {
         let otro_camino = get(&format!("/no-existe?token={TOKEN}"));
         assert_eq!(estado(otro_camino).await, StatusCode::UNAUTHORIZED);
-        let otro_metodo = get(&format!("/?token={TOKEN}")).method("POST");
+        let otro_metodo = get(&format!("/?token={TOKEN}"))
+            .method("POST")
+            .header("Origin", format!("http://127.0.0.1:{PUERTO}"));
         assert_eq!(estado(otro_metodo).await, StatusCode::UNAUTHORIZED);
     }
 
@@ -360,6 +406,104 @@ mod pruebas {
     async fn un_host_propio_con_token_es_atendido() {
         let respuesta = con_host(Some("LOCALHOST:40123")).await;
         assert_eq!(respuesta.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn los_origenes_propios_son_los_tres_de_loopback_con_el_puerto() {
+        for origen in [
+            "http://127.0.0.1:40123",
+            "http://[::1]:40123",
+            "http://localhost:40123",
+        ] {
+            assert!(origen_propio(origen, PUERTO), "{origen}");
+        }
+        for origen in [
+            "http://ejemplo.invalid",
+            "null",
+            "http://127.0.0.1:40124",
+            "https://127.0.0.1:40123",
+            "http://127.0.0.1",
+            "",
+        ] {
+            assert!(!origen_propio(origen, PUERTO), "{origen}");
+        }
+    }
+
+    const PROPIO: &str = "http://127.0.0.1:40123";
+
+    /// Si un pedido con token válido pasa las reglas de SRV-07.
+    fn pasa(metodo: &str, camino: &str, encabezados: &[(&str, &str)]) -> bool {
+        let mut pedido = get(camino).method(metodo);
+        for (nombre, valor) in encabezados {
+            pedido = pedido.header(*nombre, *valor);
+        }
+        origen_permitido(&pedido.body(Body::empty()).unwrap(), PUERTO)
+    }
+
+    #[test]
+    fn un_origin_tiene_que_ser_propio() {
+        assert!(pasa("GET", "/", &[]));
+        assert!(pasa("GET", "/", &[("Origin", PROPIO)]));
+        assert!(!pasa("GET", "/", &[("Origin", "http://ejemplo.invalid")]));
+        assert!(!pasa("GET", "/", &[("Origin", "null")]));
+        assert!(!pasa("POST", "/", &[("Origin", "http://127.0.0.1:40124")]));
+        assert!(!pasa("GET", "/", &[("Origin", "http://127.0.0.1:4012ñ")]));
+    }
+
+    #[test]
+    fn fuera_de_get_y_head_hace_falta_origin() {
+        assert!(pasa("HEAD", "/", &[]));
+        for metodo in ["POST", "PUT", "DELETE", "OPTIONS"] {
+            assert!(!pasa(metodo, "/api/x", &[]), "{metodo}");
+            assert!(pasa(metodo, "/api/x", &[("Origin", PROPIO)]), "{metodo}");
+        }
+    }
+
+    #[test]
+    fn sec_fetch_site_tiene_que_ser_del_mismo_origen_o_ninguno() {
+        for sitio in ["same-origin", "none"] {
+            assert!(pasa("GET", "/", &[("Sec-Fetch-Site", sitio)]), "{sitio}");
+        }
+        for sitio in ["cross-site", "same-site", ""] {
+            assert!(!pasa("GET", "/", &[("Sec-Fetch-Site", sitio)]), "{sitio}");
+        }
+    }
+
+    #[test]
+    fn la_entrada_navegada_se_exceptua_de_sec_fetch_site() {
+        let entrada = format!("/?token={TOKEN}");
+        let navega = [
+            ("Sec-Fetch-Site", "cross-site"),
+            ("Sec-Fetch-Mode", "navigate"),
+        ];
+        assert!(pasa("GET", &entrada, &navega));
+        let sin_navegar = [("Sec-Fetch-Site", "cross-site"), ("Sec-Fetch-Mode", "cors")];
+        assert!(!pasa("GET", &entrada, &sin_navegar));
+        assert!(!pasa("GET", "/", &navega));
+        assert!(!pasa("GET", &format!("/x?token={TOKEN}"), &navega));
+        let con_origen_ajeno = [
+            ("Sec-Fetch-Site", "cross-site"),
+            ("Sec-Fetch-Mode", "navigate"),
+            ("Origin", "http://ejemplo.invalid"),
+        ];
+        assert!(!pasa("GET", &entrada, &con_origen_ajeno));
+    }
+
+    #[tokio::test]
+    async fn otro_origen_da_403_con_su_cuerpo_antes_que_el_token() {
+        let pedido = get("/api/participantes")
+            .method("POST")
+            .header("Origin", "http://ejemplo.invalid");
+        let respuesta = servidor()
+            .oneshot(pedido.body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(respuesta.status(), StatusCode::FORBIDDEN);
+        let cuerpo: serde_json::Value = serde_json::from_str(&texto(respuesta).await).unwrap();
+        assert_eq!(
+            cuerpo,
+            serde_json::json!({"error": "origen_no_permitido", "mensaje": "El pedido viene de otra página."})
+        );
     }
 
     #[test]

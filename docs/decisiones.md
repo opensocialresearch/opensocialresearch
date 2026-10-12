@@ -6,6 +6,26 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-31.** Validación de Origin y de Sec-Fetch-Site (SRV-07). Las tres
+  reglas corren en la capa de SRV-06, después del Host y antes del token, y
+  el 403 lleva el cuerpo JSON en todas las familias. El `Origin` se compara
+  exacto con los tres orígenes propios, sin ignorar mayúsculas, porque la
+  especificación solo dice eso del Host y el navegador siempre serializa el
+  origen en minúsculas, así que `null`, otro puerto, `https` o un origen sin
+  puerto fallan. Un `OPTIONS` también tiene que traer `Origin`, porque no es
+  GET ni HEAD. Un valor que no es ASCII visible en `Origin` o en
+  `Sec-Fetch-Site` cuenta como ajeno. La excepción de la entrada vale para
+  `GET /` con el parámetro `token` en la consulta y `Sec-Fetch-Mode:
+  navigate`, sin mirar si el token es válido, porque si no lo es el pedido
+  recibe igual el 401 de SRV-05 un paso después, y no exceptúa la regla del
+  `Origin`, solo la de `Sec-Fetch-Site`. En los pasos, «el pedido lleva el
+  encabezado» captura ahora también `Origin` con cualquier valor y
+  `Sec-Fetch-Site`, en lugar del paso aparte del Origin propio, y con eso
+  SRV-07.1 corre y la corrida sin etiquetas no tiene fallidos. SRV-07.4 y
+  SRV-07.5 son `@interfaz` y quedan omitidos, y las dos marcas [verificar] de
+  la especificación sobre lo que mandan Firefox y Chromium siguen abiertas
+  hasta las pruebas de Playwright.
+
 - **D-30.** Validación de Host (SRV-06). El servidor lee el encabezado
   `Host` tal cual, sin mirar `X-Forwarded-Host` ni la autoridad del camino,
   porque esos son justo los caminos del reenlace de DNS. Es propio si es

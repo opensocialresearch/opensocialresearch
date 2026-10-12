@@ -190,6 +190,12 @@ fn una_linea_nueva(mundo: &mut Mundo, tipo: String) {
     assert_eq!(de_ese_tipo, 1, "{nuevas:?}");
 }
 
+#[then("el registro de eventos no recibió líneas nuevas")]
+fn sin_eventos_nuevos(mundo: &mut Mundo) {
+    let nuevas = eventos(mundo).split_off(mundo.lineas_de_eventos);
+    assert!(nuevas.is_empty(), "{nuevas:?}");
+}
+
 #[given("un proyecto nuevo creado con `osr nuevo`")]
 fn proyecto_nuevo(mundo: &mut Mundo) {
     let proyecto = mundo.proyecto.to_string_lossy().into_owned();

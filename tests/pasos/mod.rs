@@ -82,6 +82,9 @@ pub struct Mundo {
     lineas_del_registro: usize,
     /// Las familias de rutas que el escenario ya revisó por su nombre.
     familias_vistas: Vec<String>,
+    /// Cada pedido de la batería de SRV-10, con su factor inválido, su
+    /// método, su camino y la respuesta.
+    bateria: Vec<servidor::Disparo>,
 }
 
 impl Mundo {
@@ -114,6 +117,7 @@ impl Mundo {
             lista_de_rutas: Vec::new(),
             respuestas: Vec::new(),
             familias_vistas: Vec::new(),
+            bateria: Vec::new(),
             senal_enviada: None,
             lineas_del_registro: 0,
         }

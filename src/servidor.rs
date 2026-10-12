@@ -1,5 +1,5 @@
 //! El servidor local: rutas, Host, origen, token y encabezados de todas las
-//! respuestas (SRV-01, SRV-05 a SRV-09).
+//! respuestas (SRV-01, SRV-05 a SRV-10).
 
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{MethodFilter, MethodRouter, on};
 
 use crate::rutas::RUTAS;
-use crate::token;
+use crate::{registro, token};
 
 /// La pantalla sin proyecto, con `Abrir proyecto` y `Crear proyecto`.
 const INICIO: &str = include_str!("inicio.html");
@@ -61,6 +61,9 @@ async fn con_encabezados(mut respuesta: Response) -> Response {
 struct Sesion {
     token: Arc<str>,
     puerto: u16,
+    /// Dónde se anota cada pedido rechazado, el registro técnico salvo en
+    /// las pruebas unitarias, que no escriben en la carpeta de estado.
+    anotar: fn(&str, &str),
 }
 
 /// Un Host propio es `127.0.0.1:P`, `[::1]:P` o `localhost:P`, sin
@@ -156,24 +159,44 @@ fn no_autorizado(camino: &str) -> Response {
     respuesta
 }
 
+/// El motivo y la respuesta del rechazo de un pedido, si no pasa las
+/// validaciones. Primero el Host (SRV-06), después el origen (SRV-07) y al
+/// final el token (SRV-05).
+fn rechazo(pedido: &Request, sesion: &Sesion) -> Option<(&'static str, Response)> {
+    if !host_propio(valor(pedido, "host"), sesion.puerto) {
+        return Some(("host_no_permitido", prohibido(HOST_NO_PERMITIDO)));
+    }
+    if !origen_permitido(pedido, sesion.puerto) {
+        return Some(("origen_no_permitido", prohibido(ORIGEN_NO_PERMITIDO)));
+    }
+    if !autenticado(pedido, &sesion.token) {
+        return Some(("no_autorizado", no_autorizado(pedido.uri().path())));
+    }
+    None
+}
+
+/// La línea del registro técnico de un pedido rechazado, con el camino sin
+/// la consulta, para que nunca quede el token de la entrada (SRV-10, SRV-12).
+fn linea_de_rechazo(pedido: &Request, estado: StatusCode, motivo: &str) -> String {
+    let camino = pedido.uri().path();
+    let estado = estado.as_u16();
+    format!(
+        "pedido rechazado {} {camino} {estado} {motivo}",
+        pedido.method()
+    )
+}
+
 /// Rechaza el pedido antes de llegar a la ruta, sin ejecutar nada ni leer
-/// ningún archivo. Primero el Host (SRV-06), después el origen (SRV-07) y
-/// al final el token (SRV-05).
+/// ningún archivo, y lo anota en el registro técnico.
 async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next) -> Response {
-    let host = pedido
-        .headers()
-        .get(header::HOST)
-        .and_then(|valor| valor.to_str().ok());
-    if !host_propio(host, sesion.puerto) {
-        return prohibido(HOST_NO_PERMITIDO);
+    match rechazo(&pedido, &sesion) {
+        Some((motivo, respuesta)) => {
+            let linea = linea_de_rechazo(&pedido, respuesta.status(), motivo);
+            (sesion.anotar)("aviso", &linea);
+            respuesta
+        }
+        None => siguiente.run(pedido).await,
     }
-    if !origen_permitido(&pedido, sesion.puerto) {
-        return prohibido(ORIGEN_NO_PERMITIDO);
-    }
-    if !autenticado(&pedido, &sesion.token) {
-        return no_autorizado(pedido.uri().path());
-    }
-    siguiente.run(pedido).await
 }
 
 async fn inicio() -> Html<&'static str> {
@@ -193,6 +216,14 @@ fn atender(camino: &str, filtro: MethodFilter) -> MethodRouter {
 /// rutas inexistentes, que con token dan 404, y la de los encabezados de
 /// SRV-09 la envuelve, así llegan también a los 401, 403, 404 y 405.
 pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
+    rutas_con(Sesion {
+        token,
+        puerto,
+        anotar: registro::anotar,
+    })
+}
+
+fn rutas_con(sesion: Sesion) -> Router {
     let mut router = Router::new();
     for ruta in RUTAS {
         for metodo in ruta.metodos {
@@ -201,7 +232,6 @@ pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
             router = router.route(ruta.camino, atender(ruta.camino, filtro));
         }
     }
-    let sesion = Sesion { token, puerto };
     router
         .layer(middleware::from_fn_with_state(sesion, vigilar))
         .layer(middleware::map_response(con_encabezados))
@@ -216,8 +246,22 @@ mod pruebas {
     const TOKEN: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ";
     const PUERTO: u16 = 40123;
 
+    thread_local! {
+        /// Lo que anotó el servidor de prueba en este hilo, en lugar del
+        /// registro técnico.
+        static ANOTADO: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn anotar_en_memoria(nivel: &str, mensaje: &str) {
+        ANOTADO.with(|anotado| anotado.borrow_mut().push(format!("{nivel} {mensaje}")));
+    }
+
     fn servidor() -> Router {
-        rutas(Arc::from(TOKEN), PUERTO)
+        rutas_con(Sesion {
+            token: Arc::from(TOKEN),
+            puerto: PUERTO,
+            anotar: anotar_en_memoria,
+        })
     }
 
     async fn estado(pedido: axum::http::request::Builder) -> StatusCode {
@@ -612,6 +656,36 @@ mod pruebas {
         )
             .into_response();
         tiene_los_siete(&con_encabezados(respuesta).await);
+    }
+
+    #[tokio::test]
+    async fn cada_rechazo_deja_una_linea_con_metodo_camino_estado_y_motivo() {
+        ANOTADO.with(|anotado| anotado.borrow_mut().clear());
+        let con_token = format!("Bearer {TOKEN}");
+        let pedidos = [
+            get("/?token=otro"),
+            Request::builder()
+                .uri("/api/x?a=1")
+                .header("Host", "ejemplo.invalid:40123"),
+            get("/api/x")
+                .method("DELETE")
+                .header("Authorization", &con_token),
+            get("/").header("Authorization", &con_token),
+        ];
+        for pedido in pedidos {
+            servidor()
+                .oneshot(pedido.body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+        }
+        assert_eq!(
+            ANOTADO.with(|anotado| anotado.borrow().clone()),
+            [
+                "aviso pedido rechazado GET / 401 no_autorizado",
+                "aviso pedido rechazado GET /api/x 403 host_no_permitido",
+                "aviso pedido rechazado DELETE /api/x 403 origen_no_permitido",
+            ]
+        );
     }
 
     #[test]

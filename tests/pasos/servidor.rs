@@ -489,3 +489,143 @@ fn registro_anota_el_cierre(mundo: &mut Mundo) {
     let nuevas: Vec<&str> = registro.lines().skip(mundo.lineas_del_registro).collect();
     assert!(nuevas.iter().any(|l| l.contains("cierre")), "{nuevas:?}");
 }
+
+#[given(
+    regex = r#"^a la lista se suman los caminos inexistentes "(/no-existe)", "(/api/no-existe)" y "(/recursos/no-existe\.js)"$"#
+)]
+fn suma_inexistentes(mundo: &mut Mundo, uno: String, dos: String, tres: String) {
+    // Un camino inexistente no acepta ningún método, se le manda GET (D-34).
+    for camino in [uno, dos, tres] {
+        mundo.lista_de_rutas.push(("GET".to_string(), camino));
+    }
+}
+
+/// Un pedido de la batería de SRV-10 y lo que respondió.
+#[derive(Debug)]
+pub struct Disparo {
+    factor: String,
+    metodo: String,
+    camino: String,
+    respuesta: Respuesta,
+}
+
+/// El valor de una celda de la batería para un método, o nada si la celda
+/// dice que solo va cuando el método no es GET ni HEAD y lo es.
+fn celda(texto: &str, metodo: &str) -> Option<String> {
+    match texto.strip_suffix(" si el método no es GET ni HEAD") {
+        Some(_) if ["GET", "HEAD"].contains(&metodo) => None,
+        Some(valor) => Some(valor.to_string()),
+        None => Some(texto.to_string()),
+    }
+}
+
+#[when(
+    "se manda la batería de pedidos con un solo factor inválido a cada ruta de la lista y con cada método que acepta"
+)]
+async fn bateria(mundo: &mut Mundo, step: &Step) {
+    let tabla = step.table.as_ref().expect("falta la tabla de la batería");
+    assert_eq!(
+        tabla.rows[0],
+        ["factor inválido", "token", "Host", "Origin"]
+    );
+    mundo.bateria.clear();
+    for (metodo, camino) in mundo.lista_de_rutas.clone() {
+        for fila in &tabla.rows[1..] {
+            let mut pedido = Pedido::nuevo(&metodo, mundo.direccion(&camino))
+                .con_encabezado("Host", &mundo.resolver(&fila[2]));
+            match fila[1].as_str() {
+                "válido" => {
+                    let token = mundo.token.clone().expect("osr no escribió su token");
+                    pedido = pedido.con_encabezado("Authorization", &format!("Bearer {token}"));
+                }
+                ninguno => assert_eq!(ninguno, "ninguno"),
+            }
+            if let Some(origen) = celda(&fila[3], &metodo) {
+                pedido = pedido.con_encabezado("Origin", &mundo.resolver(&origen));
+            }
+            let respuesta = pedido.mandar().await;
+            mundo.bateria.push(Disparo {
+                factor: fila[0].clone(),
+                metodo: metodo.clone(),
+                camino: camino.clone(),
+                respuesta,
+            });
+        }
+    }
+}
+
+#[then(regex = r#"^las respuestas con factor inválido "([^"]+)" tienen estado (\d+)$"#)]
+fn estado_por_factor(mundo: &mut Mundo, factor: String, estado: u16) {
+    let del_factor: Vec<&Disparo> = mundo
+        .bateria
+        .iter()
+        .filter(|d| d.factor == factor)
+        .collect();
+    assert!(!del_factor.is_empty(), "no hay pedidos con factor {factor}");
+    for disparo in del_factor {
+        assert_eq!(
+            disparo.respuesta.estado, estado,
+            "{} {}",
+            disparo.metodo, disparo.camino
+        );
+    }
+}
+
+#[given("se guardó la cantidad de líneas del registro técnico")]
+fn guarda_lineas_del_registro(mundo: &mut Mundo) {
+    mundo.lineas_del_registro = mundo.registro_tecnico().lines().count();
+}
+
+/// Las líneas que el registro técnico recibió desde que se guardó la cantidad.
+fn lineas_nuevas(mundo: &Mundo) -> Vec<String> {
+    let registro = mundo.registro_tecnico();
+    registro
+        .lines()
+        .skip(mundo.lineas_del_registro)
+        .map(str::to_string)
+        .collect()
+}
+
+#[then("el registro técnico tiene exactamente una línea nueva por cada pedido rechazado")]
+fn una_linea_por_rechazo(mundo: &mut Mundo) {
+    let rechazados = mundo
+        .bateria
+        .iter()
+        .filter(|d| d.respuesta.estado >= 400)
+        .count();
+    assert!(rechazados > 0);
+    let nuevas = lineas_nuevas(mundo);
+    assert_eq!(nuevas.len(), rechazados, "{nuevas:#?}");
+}
+
+/// El motivo que anota el servidor según el factor inválido (D-34).
+fn motivo(factor: &str) -> &'static str {
+    match factor {
+        "token" => "no_autorizado",
+        "Host" => "host_no_permitido",
+        "Origin" => "origen_no_permitido",
+        otro => panic!("factor desconocido {otro}"),
+    }
+}
+
+/// Los pedidos se mandan de a uno, así que la línea i es la del pedido i.
+#[then(
+    "cada una de esas líneas tiene el método, el camino sin parámetros, el código de estado y el motivo del rechazo"
+)]
+fn lineas_con_detalle(mundo: &mut Mundo) {
+    let nuevas = lineas_nuevas(mundo);
+    let rechazados = mundo.bateria.iter().filter(|d| d.respuesta.estado >= 400);
+    for (linea, disparo) in nuevas.iter().zip(rechazados) {
+        let camino = disparo.camino.split('?').next().unwrap();
+        let esperado = format!(
+            " {} {camino} {} {}",
+            disparo.metodo,
+            disparo.respuesta.estado,
+            motivo(&disparo.factor)
+        );
+        assert!(
+            linea.ends_with(&esperado),
+            "{linea:?} no termina en {esperado:?}"
+        );
+    }
+}

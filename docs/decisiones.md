@@ -6,6 +6,27 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-34.** Familias de rutas y prueba de cobertura total (SRV-10). La
+  lista de `src/rutas.rs` sigue siendo la única fuente, la arman el servidor
+  y la prueba, y hoy tiene solo `GET /`. Las familias `/recursos/`, `/api/`,
+  `/audio/` y `/respaldo/` no se inventan, llegan con la interfaz en Svelte,
+  con PAR, con SRV-11 y con PAR-08, y cada ruta que agreguen a la lista entra
+  sola en las baterías de SRV-05.1, SRV-08.1 y SRV-10. Esa es la frontera de
+  este commit. A los tres caminos inexistentes se les manda solo GET, porque
+  un camino que no existe no acepta ningún método y GET es el que usaría
+  quien busca averiguar qué rutas hay. Cada pedido rechazado por SRV-05,
+  SRV-06 o SRV-07 deja una línea `aviso` en el registro técnico con la forma
+  `pedido rechazado <método> <camino> <estado> <motivo>`, con el camino sin
+  la consulta, así el token de una entrada inválida no queda escrito, y con
+  los mismos códigos de los cuerpos como motivo, `no_autorizado`,
+  `host_no_permitido` y `origen_no_permitido`. El recorte de los caminos a
+  200 caracteres y la rotación quedan para SRV-12. Las pruebas unitarias
+  arman el servidor con un anotador en memoria, para no escribir en la
+  carpeta de estado del equipo. En los pasos, la batería manda cada fila de
+  la tabla a cada método y camino de la lista, uno por vez, y como los manda
+  en orden la línea nueva i del registro técnico es la del pedido rechazado
+  i.
+
 - **D-33.** Encabezados de todas las respuestas (SRV-09). Los siete
   encabezados se ponen en una sola capa que envuelve a todas las demás,
   también a la que valida el pedido y a la ruta de reserva, así llegan a los

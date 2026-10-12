@@ -4,7 +4,9 @@
 //! otros requisitos y no se cambian para que una prueba pase.
 
 mod archivos;
+mod http;
 mod orden;
+mod servidor;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -38,6 +40,17 @@ pub struct Mundo {
     restaurar_permisos: Vec<PathBuf>,
     /// Rutas fuera de `{tmp}` que el escenario crea y hay que borrar al final.
     limpiar: Vec<PathBuf>,
+    /// Carpeta fuera de `{tmp}` con la carpeta de estado de `osr` y el
+    /// navegador de prueba, para no tocar los del equipo.
+    aparte: TempDir,
+    /// `{P}` y `{token}`, de la línea que escribió el último arranque.
+    puerto: Option<u16>,
+    token: Option<String>,
+    /// Si `osr` corre sin ningún navegador en el `PATH` (SRV-01.3).
+    sin_navegador: bool,
+    /// El pedido HTTP que arma el escenario y la respuesta que recibió.
+    pedido: Option<http::Pedido>,
+    respuesta: Option<http::Respuesta>,
 }
 
 impl Mundo {
@@ -53,7 +66,24 @@ impl Mundo {
             huellas: BTreeMap::new(),
             restaurar_permisos: Vec::new(),
             limpiar: Vec::new(),
+            aparte: aparte(),
+            puerto: None,
+            token: None,
+            sin_navegador: false,
+            pedido: None,
+            respuesta: None,
         }
+    }
+
+    /// El entorno de cada `osr`. La carpeta de estado queda en `aparte` y el
+    /// `PATH` solo tiene un `xdg-open` de prueba que anota cómo lo llamaron,
+    /// o nada si el escenario pide que no haya navegador.
+    fn entorno(&self) -> [(&'static str, PathBuf); 2] {
+        let carpeta = if self.sin_navegador { "vacia" } else { "bin" };
+        [
+            ("XDG_STATE_HOME", self.aparte.path().join("estado")),
+            ("PATH", self.aparte.path().join(carpeta)),
+        ]
     }
 
     fn tmp(&self) -> &Path {
@@ -64,6 +94,11 @@ impl Mundo {
     fn resolver(&self, texto: &str) -> String {
         let mut texto = texto.replace("{201 veces la letra a}", &"a".repeat(201));
         texto = texto.replace("{Uno, salto de línea, Dos}", "Uno\nDos");
+        if let (Some(puerto), Some(token)) = (self.puerto, &self.token) {
+            texto = texto.replace("{P+1}", &(puerto + 1).to_string());
+            texto = texto.replace("{P}", &puerto.to_string());
+            texto = texto.replace("{token}", token);
+        }
         texto = texto.replace("{tmp}", &self.tmp().to_string_lossy());
         texto.replace("{proyecto}", &self.proyecto.to_string_lossy())
     }
@@ -101,6 +136,29 @@ impl Drop for Mundo {
             let _ = fs::remove_dir_all(ruta);
         }
     }
+}
+
+/// La carpeta `aparte` de un escenario, con `bin/xdg-open` de prueba y una
+/// carpeta `vacia` para el `PATH` sin navegador.
+fn aparte() -> TempDir {
+    let aparte = tempfile::tempdir().expect("crear la carpeta aparte");
+    let bin = aparte.path().join("bin");
+    fs::create_dir(&bin).unwrap();
+    fs::create_dir(aparte.path().join("vacia")).unwrap();
+    let xdg_open = bin.join("xdg-open");
+    let registro = aparte.path().join("navegador.log");
+    let guion = format!("#!/bin/sh\necho \"$0 $*\" >> '{}'\n", registro.display());
+    fs::write(&xdg_open, guion).unwrap();
+    fs::set_permissions(&xdg_open, fs::Permissions::from_mode(0o755)).unwrap();
+    aparte
+}
+
+/// La ruta de un programa en el `PATH` de las pruebas, que no es el de `osr`.
+fn programa(nombre: &str) -> PathBuf {
+    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+        .map(|carpeta| carpeta.join(nombre))
+        .find(|ruta| ruta.is_file())
+        .unwrap_or_else(|| panic!("falta {nombre} en el PATH"))
 }
 
 /// Manda SIGTERM a un proceso; `Child::kill` mandaría SIGKILL.

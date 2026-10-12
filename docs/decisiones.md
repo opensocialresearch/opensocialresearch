@@ -6,6 +6,27 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-22.** Arranque del servidor (SRV-01). El navegador se abre con
+  `xdg-open`, sin crates nuevos, porque la v0.1 es solo para Linux. Para que
+  el token no quede en los argumentos de ningún proceso (SRV-03), `xdg-open`
+  recibe la ruta de una página de un solo uso que redirige a la dirección con
+  una etiqueta `meta refresh`, en la carpeta de estado (0700), con permisos
+  0600, y que se borra a los 30 s o al cerrar `osr`, lo que pase antes. Si
+  `xdg-open` no existe o termina con error, `osr` avisa con el mensaje de la
+  tabla y sigue corriendo. Las pruebas simulan el sistema sin navegador
+  (SRV-01.3) corriendo `osr` con un `PATH` que solo tiene una carpeta vacía, y
+  en los demás escenarios el `PATH` tiene un `xdg-open` de prueba que anota cómo
+  lo llamaron, así ninguna prueba abre el navegador del equipo. La carpeta de
+  estado de las pruebas también va aparte, fuera de `{tmp}` y del equipo.
+  `--sin-navegador` es una opción global, así vale antes o después de la orden.
+  Hasta que existan PRY-04 y la interfaz en Svelte, la entrada con token
+  sirve la pantalla sin proyecto, con o sin proyecto abierto, y sus
+  formularios todavía no hacen nada. `osr nuevo` ahora crea, levanta el
+  servidor, escribe la línea de SRV-01 y espera la señal, y los pasos esperan
+  esa línea en lugar del bloqueo para saber que `osr` quedó listo. Se suma
+  tower como dependencia de desarrollo, ya presente por axum, para probar las
+  rutas sin abrir un puerto.
+
 - **D-21.** Los escenarios `@recorrido-completo` no entran en la corrida
   estricta de cada requisito, porque se verifican sobre el proyecto de prueba
   después de ejecutar todas las acciones del tramo, y ese recorrido no existe

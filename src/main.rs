@@ -1,13 +1,18 @@
 //! `osr`, el programa de Open Social Research.
 
+mod arranque;
+mod estado;
+mod navegador;
 mod nuevo;
 mod plantillas;
+mod servidor;
+mod token;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 
+use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Parser, Subcommand};
-use tokio::signal::unix::{SignalKind, signal};
 
 /// Herramienta libre de investigación social aplicada.
 #[derive(Parser)]
@@ -15,6 +20,9 @@ use tokio::signal::unix::{SignalKind, signal};
 struct Cli {
     #[command(subcommand)]
     orden: Option<Orden>,
+    /// No abre el navegador (SRV-01).
+    #[arg(long, global = true)]
+    sin_navegador: bool,
 }
 
 #[derive(Subcommand)]
@@ -26,35 +34,83 @@ enum Orden {
         /// Nombre visible; por defecto, el último componente de la ruta.
         #[arg(long)]
         nombre: Option<String>,
-        /// No abre el navegador (SRV-01).
-        #[arg(long)]
-        sin_navegador: bool,
     },
 }
 
-/// Crea el proyecto y lo mantiene abierto hasta SIGINT o SIGTERM (SRV-15).
-///
-/// Las señales se registran antes de crear, para que una señal que llega
-/// apenas existe el bloqueo ya encuentre quién la atienda.
-async fn crear_y_esperar(ruta: &Path, nombre: Option<&str>) -> ExitCode {
-    let mut terminar = signal(SignalKind::terminate()).expect("registrar SIGTERM");
-    let mut interrumpir = signal(SignalKind::interrupt()).expect("registrar SIGINT");
-    if let Err(error) = nuevo::crear(ruta, nombre, &nuevo::Momento::ahora()) {
-        eprintln!("osr: {error}");
-        return ExitCode::from(error.codigo() as u8);
+/// El mensaje de SRV-01 para una orden u opción desconocida. Los demás
+/// errores de la línea de órdenes quedan como los da clap.
+fn desconocido(error: &clap::Error) -> Option<String> {
+    let contexto = match error.kind() {
+        ErrorKind::UnknownArgument => ContextKind::InvalidArg,
+        ErrorKind::InvalidSubcommand => ContextKind::InvalidSubcommand,
+        _ => return None,
+    };
+    match error.get(contexto) {
+        Some(ContextValue::String(texto)) => Some(format!(
+            "osr: no se reconoce {texto}. Las órdenes son osr, osr abrir <carpeta> y osr nuevo <carpeta>."
+        )),
+        _ => None,
     }
-    tokio::select! {
-        _ = terminar.recv() => {}
-        _ = interrumpir.recv() => {}
-    }
-    let _ = std::fs::remove_file(ruta.join(".osr/bloqueo"));
-    ExitCode::SUCCESS
 }
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
-    match Cli::parse().orden {
-        Some(Orden::Nuevo { ruta, nombre, .. }) => crear_y_esperar(&ruta, nombre.as_deref()).await,
-        None => ExitCode::SUCCESS,
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(error) => match desconocido(&error) {
+            Some(mensaje) => {
+                eprintln!("{mensaje}");
+                return ExitCode::from(2);
+            }
+            None => error.exit(),
+        },
+    };
+    let nuevo = cli
+        .orden
+        .as_ref()
+        .map(|Orden::Nuevo { ruta, nombre }| (ruta.as_path(), nombre.as_deref()));
+    arranque::correr(nuevo, cli.sin_navegador).await
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+
+    fn mensaje(argumentos: &[&str]) -> Option<String> {
+        let error = Cli::try_parse_from(argumentos)
+            .err()
+            .expect("tenía que fallar");
+        desconocido(&error)
+    }
+
+    #[test]
+    fn una_opcion_o_una_orden_desconocida_da_el_mensaje_de_srv_01() {
+        assert_eq!(
+            mensaje(&["osr", "--opcion-falsa"]).unwrap(),
+            "osr: no se reconoce --opcion-falsa. Las órdenes son osr, osr abrir <carpeta> y osr nuevo <carpeta>."
+        );
+        assert!(
+            mensaje(&["osr", "borrar"])
+                .unwrap()
+                .starts_with("osr: no se reconoce borrar.")
+        );
+    }
+
+    #[test]
+    fn los_demas_errores_quedan_como_los_da_clap() {
+        assert_eq!(mensaje(&["osr", "nuevo"]), None);
+        assert_eq!(mensaje(&["osr", "--help"]), None);
+    }
+
+    #[test]
+    fn sin_navegador_vale_antes_y_despues_de_la_orden() {
+        assert!(
+            Cli::try_parse_from(["osr", "--sin-navegador"])
+                .unwrap()
+                .sin_navegador
+        );
+        let cli = Cli::try_parse_from(["osr", "nuevo", "x", "--sin-navegador"]).unwrap();
+        assert!(cli.sin_navegador);
+        assert!(!Cli::try_parse_from(["osr"]).unwrap().sin_navegador);
     }
 }

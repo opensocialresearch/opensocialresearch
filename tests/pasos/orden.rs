@@ -63,6 +63,10 @@ impl Mundo {
         fs::read_to_string(self.salida("error")).expect("leer la salida de error")
     }
 
+    pub(super) fn salida_estandar(&self) -> String {
+        fs::read_to_string(self.salida("estandar")).expect("leer la salida estándar")
+    }
+
     /// El código de salida, esperando hasta 5 s a que `osr` termine.
     fn codigo_de_salida(&mut self) -> i32 {
         if self.codigo.is_none() {
@@ -77,54 +81,85 @@ impl Mundo {
     }
 }
 
-// Solo `osr nuevo` existe todavía; con otras órdenes el paso queda sin
-// definir y sus escenarios cuentan como omitidos en vez de fallar. Quien
-// implemente `osr abrir` o `osr` solo amplía esta captura.
-#[when(regex = r"^se ejecuta `(osr nuevo .*)`$")]
-fn se_ejecuta(mundo: &mut Mundo, orden: String) {
-    let partes = dividir(&orden);
-    assert_eq!(partes[0], "osr", "la orden tiene que empezar con osr");
-    let argumentos: Vec<String> = partes[1..].iter().map(|p| mundo.resolver(p)).collect();
-    mundo.proyecto = PathBuf::from(&argumentos[1]);
-    let salidas = tempfile::tempdir().expect("crear la carpeta de salidas");
-    let estandar = fs::File::create(salidas.path().join("estandar")).unwrap();
-    let error = fs::File::create(salidas.path().join("error")).unwrap();
-    mundo.salidas = Some(salidas);
-    let binario = env!("CARGO_BIN_EXE_osr");
-    let mut comando = match &mundo.disco {
-        Some(disco) => {
-            let mut nsenter = Command::new("nsenter");
-            let pid = disco.id().to_string();
-            nsenter.args(["-t", &pid, "-U", "-m", "--preserve-credentials", binario]);
-            nsenter
+/// El comienzo de la línea que `osr` escribe al quedar listo (SRV-01).
+pub(super) const LISTO: &str = "Open Social Research está abierto en ";
+
+/// El puerto y el token de la dirección que `osr` escribe al quedar listo,
+/// si `salida` ya tiene esa línea completa.
+pub(super) fn direccion_de(salida: &str) -> Option<(u16, String)> {
+    let linea = salida.lines().next().filter(|_| salida.contains('\n'))?;
+    let resto = linea
+        .strip_prefix(LISTO)?
+        .strip_prefix("http://127.0.0.1:")?;
+    let (puerto, token) = resto.split_once("/?token=")?;
+    Some((puerto.parse().ok()?, token.to_string()))
+}
+
+impl Mundo {
+    /// Lanza `osr` con los argumentos de `orden` y espera hasta que termine o
+    /// hasta que escriba la línea de SRV-01, de la que anota `{P}` y `{token}`.
+    pub(super) fn lanzar(&mut self, orden: &str) {
+        let partes = dividir(orden);
+        assert_eq!(partes[0], "osr", "la orden tiene que empezar con osr");
+        let argumentos: Vec<String> = partes[1..].iter().map(|p| self.resolver(p)).collect();
+        if argumentos.first().map(String::as_str) == Some("nuevo") {
+            self.proyecto = PathBuf::from(&argumentos[1]);
         }
-        None => Command::new(binario),
-    };
-    let osr = comando
-        .args(&argumentos)
-        .current_dir(mundo.tmp())
-        .stdin(Stdio::null())
-        .stdout(estandar)
-        .stderr(error)
-        .spawn()
-        .expect("lanzar osr");
-    mundo.osr = Some(osr);
-    mundo.codigo = None;
-    // `osr` sigue corriendo cuando abre un proyecto: se espera hasta que
-    // termine o hasta que el proyecto quede abierto, con su bloqueo.
-    let inicio = Instant::now();
-    while inicio.elapsed() < Duration::from_secs(10) {
-        let osr = mundo.osr.as_mut().unwrap();
-        if let Some(estado) = osr.try_wait().unwrap() {
-            mundo.codigo = Some(estado.code().unwrap_or(-1));
-            return;
-        }
-        if mundo.bloqueo().exists() {
-            return;
-        }
-        std::thread::sleep(Duration::from_millis(20));
+        let salidas = tempfile::tempdir().expect("crear la carpeta de salidas");
+        let estandar = fs::File::create(salidas.path().join("estandar")).unwrap();
+        let error = fs::File::create(salidas.path().join("error")).unwrap();
+        self.salidas = Some(salidas);
+        let binario = env!("CARGO_BIN_EXE_osr");
+        let mut comando = match &self.disco {
+            Some(disco) => {
+                let mut nsenter = Command::new(super::programa("nsenter"));
+                let pid = disco.id().to_string();
+                nsenter.args(["-t", &pid, "-U", "-m", "--preserve-credentials", binario]);
+                nsenter
+            }
+            None => Command::new(binario),
+        };
+        let osr = comando
+            .args(&argumentos)
+            .current_dir(self.tmp())
+            .envs(self.entorno())
+            .stdin(Stdio::null())
+            .stdout(estandar)
+            .stderr(error)
+            .spawn()
+            .expect("lanzar osr");
+        self.osr = Some(osr);
+        self.codigo = None;
+        self.esperar_listo();
     }
-    panic!("osr no terminó ni abrió el proyecto en 10 s");
+
+    /// `osr` sigue corriendo cuando queda listo: se espera hasta que termine
+    /// o hasta que escriba la dirección.
+    fn esperar_listo(&mut self) {
+        let inicio = Instant::now();
+        while inicio.elapsed() < Duration::from_secs(10) {
+            let osr = self.osr.as_mut().unwrap();
+            if let Some(estado) = osr.try_wait().unwrap() {
+                self.codigo = Some(estado.code().unwrap_or(-1));
+                return;
+            }
+            if let Some((puerto, token)) = direccion_de(&self.salida_estandar()) {
+                self.puerto = Some(puerto);
+                self.token = Some(token);
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        panic!("osr no terminó ni quedó listo en 10 s");
+    }
+}
+
+// Solo existen `osr` y `osr nuevo`; con otras órdenes, como `osr abrir`, el
+// paso queda sin definir y sus escenarios cuentan como omitidos en vez de
+// fallar (D-20). Quien implemente otra orden amplía esta captura.
+#[when(regex = r"^se ejecuta `(osr(?: nuevo .*| --sin-navegador| --opcion-falsa)?)`$")]
+fn se_ejecuta(mundo: &mut Mundo, orden: String) {
+    mundo.lanzar(&orden);
 }
 
 #[when("osr se cierra de forma ordenada")]

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Corre las barandas de DESARROLLO.md. Sale con error si alguna falla.
+#
+#   bin/barandas @PRY-01      escenarios de un requisito y todas las barandas
+#   bin/barandas              todas las barandas, sin escenarios etiquetados
+#
+# La mutación corre solo sobre lo que cambió respecto de origin/main.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+etiqueta="${1:-}"
+base="${OSR_BASE:-origin/main}"
+
+paso() { printf '\n== %s\n' "$*"; }
+
+paso "formato"
+cargo fmt --check
+
+paso "analizador"
+cargo clippy --all-targets -q -- -D warnings
+
+paso "pruebas unitarias"
+cargo test -q --bins
+
+if [[ -n "$etiqueta" ]]; then
+  paso "escenarios $etiqueta"
+  OSR_ESTRICTO=1 cargo test -q --test escenarios -- --tags "$etiqueta and not @manual and not @interfaz and not @equipo-autor"
+fi
+
+paso "cobertura y CRAP (umbral 30)"
+cargo llvm-cov -q --lcov --output-path lcov.info >/dev/null
+cargo crap --lcov lcov.info --threshold 30 --fail-above --summary
+
+paso "mutación sobre el diff contra $base"
+git diff "$base" -- 'src/*.rs' > /tmp/osr-mutantes.diff || true
+if [[ -s /tmp/osr-mutantes.diff ]]; then
+  cargo mutants --in-diff /tmp/osr-mutantes.diff --no-shuffle -- -q
+else
+  echo "sin cambios en src/"
+fi
+
+paso "avance de escenarios"
+cargo test -q --test escenarios 2>&1 | grep -E 'scenarios|steps' | tail -2
+
+echo; echo "barandas en verde"

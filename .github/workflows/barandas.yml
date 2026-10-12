@@ -1,0 +1,25 @@
+name: barandas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  barandas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-mutants,cargo-crap
+      - name: Barandas
+        env:
+          OSR_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: bin/barandas

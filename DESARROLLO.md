@@ -82,6 +82,24 @@ umbrales fijos.
 - **Estilo y advertencias.** El formateador y el analizador estático del
   lenguaje pasan sin advertencias.
 
+### Cómo se corren
+
+`bin/barandas @PRY-01` corre todo para el requisito en curso, el formateador,
+el analizador, las pruebas unitarias, los escenarios de esa etiqueta en modo
+estricto (un paso sin definir es una falla), la cobertura con la métrica CRAP,
+la mutación sobre lo que cambió respecto de `origin/main` y, al final, el
+avance de todos los escenarios. Se corre después de commitear y antes del push,
+y la integración continua corre lo mismo en cada push y en cada pull request.
+
+- Los escenarios de requisitos todavía no implementados no son una falla, sus
+  pasos sin definir cuentan como omitidos. El avance se lee en la última línea.
+- Un mutante que no se puede matar sin debilitar un escenario se justifica con
+  `#[mutants::skip]` y un comentario `// porque:` al lado, con la razón.
+- Los escenarios etiquetados `@lento`, como los de archivos de varios
+  gigabytes, corren en la integración continua y no en cada ejecución local.
+  Los archivos grandes de prueba son archivos dispersos, creados con su tamaño
+  sin ocupar el disco.
+
 ## Herramientas
 
 | Parte | Escenarios | Pruebas | Cobertura y CRAP | Mutación |

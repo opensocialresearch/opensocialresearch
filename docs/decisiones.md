@@ -4,6 +4,20 @@ Registro de las decisiones del proyecto, de la más reciente a la más antigua.
 Cada cambio de alcance, de umbral, de herramienta o de especificación aprobada
 se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
+## 2026-10-11 · Arranque del código
+
+- **D-18.** Los escenarios con archivos de varios gigabytes o audios largos se
+  etiquetan `@lento` y corren en la integración continua. Los archivos grandes
+  se crean dispersos, con su tamaño declarado sin ocupar el disco.
+- **D-19.** Dependencias base del orquestador, fijadas para que cada tramo no
+  las vuelva a elegir. clap para la línea de órdenes, tokio y axum para el
+  servidor, rusqlite con SQLite incluido para el índice, serde con toml y
+  serde_json para los archivos, y para las pruebas cucumber, reqwest y
+  tempfile. Cualquier otra se agrega cuando un requisito la necesite, con su
+  razón en este registro.
+- **Prueba del primer día.** El R del autor (4.6.1) carga tidyverse 2.0.0 y
+  sf 1.1.2 sin compilar nada. El plan B del tramo 3 no se activa por esto.
+
 ## 2026-10-11 · Lecturas adoptadas al escribir los escenarios
 
 Al pasar las especificaciones a escenarios aparecieron ambigüedades menores.

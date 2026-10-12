@@ -194,6 +194,25 @@ buena parte de las personas que empiezan a investigar. Debe abrir rápido,
 usar poca memoria y no trabar la máquina, y lo pesado se puede mandar a otro
 lado.
 
+## Trabajo en equipo
+
+Casi nunca se investiga sola o solo. Un proyecto se comparte con colegas sin
+que una nube intermedia guarde los datos, las computadoras se conectan entre
+sí, cifradas, y cada quien conserva su copia completa.
+
+- El documento, la bitácora, los notebooks y la codificación se editan entre
+  varias personas, en tiempo real cuando están conectadas o cada quien por su
+  lado, y los cambios se unen solos al reconectarse.
+- Los audios, fotos y bases de datos se copian directamente entre las
+  computadoras del equipo.
+- Cada persona ejecuta R y Python en su máquina, con el mismo entorno anotado
+  en el proyecto, y se comparten el código y los resultados.
+- Cuando dos personas codifican distinto el mismo fragmento, la herramienta no
+  elige, muestra las dos versiones y el equipo decide. Comparar codificaciones
+  es parte del método.
+- Quién puede ver qué, por ejemplo los audios con nombres frente a las
+  transcripciones anonimizadas, se define por proyecto.
+
 ## Licencia
 
 El código se publica con licencia MIT. Cualquiera puede usarlo, modificarlo,

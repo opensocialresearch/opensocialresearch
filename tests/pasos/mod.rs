@@ -37,6 +37,8 @@ pub struct Mundo {
     /// Los procesos `osr` que seguían corriendo cuando se lanzó otro, del
     /// más viejo al más nuevo, para no perderlos ni dejarlos vivos.
     anteriores: Vec<Child>,
+    /// Cuántas líneas tenía el registro de eventos al guardar la cantidad.
+    lineas_de_eventos: usize,
     /// El cuerpo de la interfaz que guardó «se guarda el estado que muestra la app».
     estado_guardado: Option<String>,
     /// Código de salida de `osr`, cuando ya terminó.
@@ -92,6 +94,7 @@ impl Mundo {
             osr: None,
             anteriores: Vec::new(),
             estado_guardado: None,
+            lineas_de_eventos: 0,
             codigo: None,
             disco: None,
             red: None,
@@ -155,6 +158,9 @@ impl Mundo {
     fn resolver(&self, texto: &str) -> String {
         let mut texto = texto.replace("{201 veces la letra a}", &"a".repeat(201));
         texto = texto.replace("{Uno, salto de línea, Dos}", "Uno\nDos");
+        if let Some(primero) = self.anteriores.first() {
+            texto = texto.replace("{PID del primer proceso}", &primero.id().to_string());
+        }
         if let Some(anterior) = &self.token_anterior {
             texto = texto.replace("{token anterior}", anterior);
         }

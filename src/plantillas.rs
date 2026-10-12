@@ -116,6 +116,20 @@ pub fn evento_verificacion(fecha: &str) -> String {
     evento(fecha, "verificacion", Verificacion::default())
 }
 
+/// El detalle de `bloqueo_abandonado`, con lo que decía el bloqueo
+/// reemplazado (D-28).
+#[derive(Serialize)]
+struct Abandonado<'a> {
+    pid: Option<u32>,
+    inicio: Option<&'a str>,
+}
+
+/// La línea `bloqueo_abandonado`, con el PID y el inicio del bloqueo
+/// reemplazado, o `null` si no se pudieron leer (PRY-05).
+pub fn evento_bloqueo_abandonado(fecha: &str, pid: Option<u32>, inicio: Option<&str>) -> String {
+    evento(fecha, "bloqueo_abandonado", Abandonado { pid, inicio })
+}
+
 /// `.osr/bloqueo`, con el número del proceso y su inicio (PRY-05).
 pub fn bloqueo(pid: u32, inicio: &str) -> String {
     format!("pid = {pid}\ninicio = {inicio}\n")
@@ -271,6 +285,18 @@ mod pruebas {
             "{\"fecha\":\"2026-10-12T05:00:00-06:00\",\"tipo\":\"verificacion\",\"detalle\":\
              {\"modificados_fuera\":[],\"con_error\":[],\"faltantes\":[],\"originales_alterados\":[],\
              \"no_registrados\":0,\"temporales_eliminados\":0}}\n"
+        );
+    }
+
+    #[test]
+    fn evento_bloqueo_abandonado_tiene_pid_e_inicio() {
+        assert_eq!(
+            evento_bloqueo_abandonado("2026-10-12T06:00:00-06:00", Some(7), Some("x")),
+            "{\"fecha\":\"2026-10-12T06:00:00-06:00\",\"tipo\":\"bloqueo_abandonado\",\
+             \"detalle\":{\"pid\":7,\"inicio\":\"x\"}}\n"
+        );
+        assert!(
+            evento_bloqueo_abandonado("f", None, None).contains("{\"pid\":null,\"inicio\":null}")
         );
     }
 

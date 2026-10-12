@@ -166,3 +166,26 @@ fn ultimo_evento(mundo: &mut Mundo, tipo: String) {
     let evento: serde_json::Value = serde_json::from_str(linea).expect("JSON válido");
     assert_eq!(evento["tipo"], tipo.as_str());
 }
+
+fn eventos(mundo: &Mundo) -> Vec<serde_json::Value> {
+    let texto =
+        fs::read_to_string(mundo.ruta("bitacora/registro.jsonl")).expect("leer el registro");
+    texto
+        .lines()
+        .map(|linea| serde_json::from_str(linea).expect("JSON válido"))
+        .collect()
+}
+
+#[given("se guardó la cantidad de líneas del registro de eventos")]
+fn guarda_cantidad(mundo: &mut Mundo) {
+    mundo.lineas_de_eventos = eventos(mundo).len();
+}
+
+/// Cuenta solo las líneas nuevas de ese tipo, porque cada apertura anota
+/// además su `verificacion` (D-17, D-28).
+#[then(regex = r#"^el registro de eventos tiene exactamente una línea nueva de tipo "([a-z_]+)"$"#)]
+fn una_linea_nueva(mundo: &mut Mundo, tipo: String) {
+    let nuevas = eventos(mundo).split_off(mundo.lineas_de_eventos);
+    let de_ese_tipo = nuevas.iter().filter(|e| e["tipo"] == tipo.as_str()).count();
+    assert_eq!(de_ese_tipo, 1, "{nuevas:?}");
+}

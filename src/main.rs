@@ -2,6 +2,7 @@
 
 mod abrir;
 mod arranque;
+mod bloqueo;
 mod cierre;
 mod escucha;
 mod estado;

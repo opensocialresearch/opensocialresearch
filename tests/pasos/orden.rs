@@ -219,9 +219,8 @@ fn esta_corriendo(mundo: &mut Mundo) {
     );
 }
 
-// Solo los códigos que `osr` ya produce. El 4 del bloqueo llega con PRY-05 y
-// su escenario queda omitido hasta entonces (D-20).
-#[then(regex = r"^el código de salida es (2|3|5|6)$")]
+// Solo los códigos que `osr` ya produce (D-20).
+#[then(regex = r"^el código de salida es (2|3|4|5|6)$")]
 fn codigo_es(mundo: &mut Mundo, codigo: i32) {
     assert_eq!(mundo.codigo_de_salida(), codigo);
 }
@@ -257,4 +256,33 @@ fn error_termina(mundo: &mut Mundo, fin: String) {
         sin_salto.ends_with(&fin),
         "{error:?} no termina con {fin:?}"
     );
+}
+
+#[when("se abre el proyecto con `osr abrir {proyecto} --sin-navegador`")]
+fn se_abre(mundo: &mut Mundo) {
+    mundo.lanzar("osr abrir {proyecto} --sin-navegador");
+}
+
+/// `Child::kill` manda SIGKILL. Se espera al proceso para que no quede como
+/// zombi, que seguiría figurando en `/proc` como vivo.
+#[given("se envía SIGKILL al proceso osr")]
+fn sigkill(mundo: &mut Mundo) {
+    let osr = mundo.osr.as_mut().expect("falta «se ejecuta»");
+    osr.kill().expect("mandar SIGKILL");
+    osr.wait().expect("esperar a osr");
+}
+
+#[then("el primer proceso osr sigue atendiendo pedidos autenticados")]
+async fn primero_atiende(mundo: &mut Mundo) {
+    let primero = mundo
+        .anteriores
+        .first_mut()
+        .expect("falta el primer proceso");
+    assert!(primero.try_wait().unwrap().is_none(), "el primero terminó");
+    let token = mundo.token.clone().expect("osr no escribió su token");
+    let respuesta = super::http::Pedido::nuevo("GET", mundo.direccion("/"))
+        .con_encabezado("Authorization", &format!("Bearer {token}"))
+        .mandar()
+        .await;
+    assert_eq!(respuesta.estado, 200);
 }

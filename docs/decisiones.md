@@ -6,6 +6,31 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-28.** Un solo proceso por proyecto (PRY-05). El bloqueo se escribe
+  completo en un temporal de `.osr/` con el nombre de PRY-12 y se pone en su
+  lugar con un enlace duro, que falla si ya existe, así dos procesos no lo
+  toman a la vez y nadie lee un bloqueo a medio escribir. Si ya existe, `osr`
+  lee su PID y mira `/proc/<pid>`, y lo da por vivo y de un `osr` si el
+  proceso existe, no es un zombi y su nombre de programa en
+  `/proc/<pid>/comm` es el mismo que el propio, sin fijar el texto `osr`. Con
+  un `osr` vivo termina con código 4 y el mensaje de la tabla, sin tocar el
+  bloqueo. Si no, lo reemplaza con un `rename` y anota `bloqueo_abandonado`
+  antes de `verificacion`, con el detalle `{"pid": <n>, "inicio": <marca>}`
+  del bloqueo reemplazado, o `null` en lo que no se pudo leer, porque la
+  especificación no fija el detalle. Un bloqueo con el PID de este mismo
+  proceso, o que no se puede leer, cuenta como abandonado. Si después de tomar
+  el bloqueo falla la escritura del registro de eventos, `osr` lo suelta antes
+  de terminar con código 6. Dos procesos que encuentran a la vez el mismo
+  bloqueo abandonado pueden reemplazarlo los dos, una carrera que el tramo 1
+  no cubre y que la instancia única de la v1.0 resuelve. En los pasos,
+  «el registro de eventos tiene exactamente una línea nueva de tipo» cuenta
+  solo las líneas nuevas de ese tipo, porque cada apertura anota además su
+  `verificacion` (D-17) y PRY-05.2 tendría dos líneas nuevas. Un `osr` que
+  queda corriendo cuando el escenario lanza otro se guarda aparte, para
+  resolver `{PID del primer proceso}`, preguntarle si sigue atendiendo y
+  cerrarlo al final, y el paso de SIGKILL espera al proceso para que no quede
+  como zombi.
+
 - **D-27.** Abrir un proyecto (PRY-04). `osr abrir <ruta>` y `osr <ruta>` son
   la misma acción, así que una palabra suelta después de `osr` es la ruta de
   un proyecto, `osr borrar` intenta abrir la carpeta `borrar` y el mensaje de

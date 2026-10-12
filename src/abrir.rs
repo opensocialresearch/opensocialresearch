@@ -2,6 +2,7 @@
 //!
 //! Abrir es comprobar la carpeta, tomar el bloqueo (PRY-05) y anotar la
 //! verificación al abrir (PRY-11, D-17). El servidor lo levanta el arranque.
+//! Si algo falla después de tomar el bloqueo, se suelta.
 
 use std::fmt;
 use std::fs;
@@ -9,12 +10,13 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use crate::nuevo::{self, Momento};
-use crate::plantillas;
+use crate::{bloqueo, plantillas};
 
 /// Errores de `osr abrir`, con su código de salida.
 #[derive(Debug)]
 pub enum Error {
     NoExiste(PathBuf),
+    Abierto(u32),
     Escritura(PathBuf, io::Error),
 }
 
@@ -22,6 +24,7 @@ impl Error {
     pub fn codigo(&self) -> i32 {
         match self {
             Error::NoExiste(_) => 3,
+            Error::Abierto(_) => 4,
             Error::Escritura(..) => 6,
         }
     }
@@ -31,6 +34,10 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::NoExiste(ruta) => write!(f, "no existe la carpeta {}.", ruta.display()),
+            Error::Abierto(pid) => write!(
+                f,
+                "el proyecto ya está abierto en otro proceso (PID {pid}). Hay que usar esa pestaña o cerrar ese proceso."
+            ),
             Error::Escritura(ruta, error) => write!(
                 f,
                 "no se pudo abrir el proyecto en {} ({}).",
@@ -50,10 +57,17 @@ fn anotar(raiz: &Path, linea: &str) -> io::Result<()> {
     registro.sync_data()
 }
 
-/// Escribe el bloqueo de este proceso y anota la verificación.
-fn preparar(raiz: &Path, momento: &Momento) -> io::Result<()> {
-    let bloqueo = plantillas::bloqueo(std::process::id(), &momento.marca);
-    nuevo::archivo(&raiz.join(".osr/bloqueo"), &bloqueo)?;
+/// Anota el bloqueo abandonado, si lo hubo, y la verificación.
+fn anotar_apertura(
+    raiz: &Path,
+    abandonado: Option<bloqueo::Abandonado>,
+    momento: &Momento,
+) -> io::Result<()> {
+    if let Some(abandonado) = abandonado {
+        let inicio = abandonado.inicio.as_deref();
+        let linea = plantillas::evento_bloqueo_abandonado(&momento.marca, abandonado.pid, inicio);
+        anotar(raiz, &linea)?;
+    }
     anotar(raiz, &plantillas::evento_verificacion(&momento.marca))
 }
 
@@ -62,7 +76,16 @@ pub fn abrir(ruta: &Path, momento: &Momento) -> Result<(), Error> {
     if !ruta.is_dir() {
         return Err(Error::NoExiste(ruta.to_path_buf()));
     }
-    preparar(ruta, momento).map_err(|error| Error::Escritura(ruta.to_path_buf(), error))
+    let escritura = |error| Error::Escritura(ruta.to_path_buf(), error);
+    let abandonado = match bloqueo::tomar(ruta, &momento.marca) {
+        Ok(abandonado) => abandonado,
+        Err(bloqueo::Error::Abierto(pid)) => return Err(Error::Abierto(pid)),
+        Err(bloqueo::Error::Escritura(error)) => return Err(escritura(error)),
+    };
+    anotar_apertura(ruta, abandonado, momento).map_err(|error| {
+        let _ = fs::remove_file(ruta.join(".osr/bloqueo"));
+        escritura(error)
+    })
 }
 
 #[cfg(test)]
@@ -124,10 +147,45 @@ mod pruebas {
     }
 
     #[test]
+    fn un_bloqueo_abandonado_queda_anotado_antes_de_la_verificacion() {
+        let (_tmp, raiz) = proyecto();
+        let viejo = "2026-10-11T05:00:00-06:00";
+        fs::write(raiz.join(".osr/bloqueo"), plantillas::bloqueo(1, viejo)).unwrap();
+        abrir(&raiz, &momento()).unwrap();
+        let registro = fs::read_to_string(raiz.join("bitacora/registro.jsonl")).unwrap();
+        let marca = "2026-10-12T05:00:00-06:00";
+        let esperado = [
+            plantillas::evento_bloqueo_abandonado(marca, Some(1), Some(viejo)),
+            plantillas::evento_verificacion(marca),
+        ]
+        .concat();
+        assert!(registro.ends_with(&esperado), "{registro}");
+        assert_eq!(registro.lines().count(), 3);
+    }
+
+    #[test]
+    fn con_otro_osr_abierto_da_codigo_4_con_su_pid() {
+        let error = Error::Abierto(1234);
+        assert_eq!(error.codigo(), 4);
+        assert_eq!(
+            error.to_string(),
+            "el proyecto ya está abierto en otro proceso (PID 1234). Hay que usar esa pestaña o cerrar ese proceso."
+        );
+    }
+
+    #[test]
+    fn sin_carpeta_osr_da_codigo_6() {
+        let (_tmp, raiz) = proyecto();
+        fs::remove_dir_all(raiz.join(".osr")).unwrap();
+        assert_eq!(abrir(&raiz, &momento()).unwrap_err().codigo(), 6);
+    }
+
+    #[test]
     fn sin_registro_de_eventos_no_se_abre_y_da_codigo_6() {
         let (_tmp, raiz) = proyecto();
         fs::remove_file(raiz.join("bitacora/registro.jsonl")).unwrap();
         let error = abrir(&raiz, &momento()).unwrap_err();
+        assert!(!raiz.join(".osr/bloqueo").exists(), "soltó el bloqueo");
         assert_eq!(error.codigo(), 6);
         assert_eq!(
             error.to_string(),

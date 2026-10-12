@@ -6,6 +6,17 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-24.** Token por arranque (SRV-03). El token llegó con SRV-01, porque la
+  línea de arranque ya lo lleva, y se genera con 256 bits de `/dev/urandom` en
+  base64url hecho a mano y probado con los vectores del RFC 4648, sin crates
+  nuevos. Este requisito suma los pasos de sus escenarios. SRV-03.2 abre el
+  proyecto con `osr abrir`, que es PRY-04, así que queda omitido hasta que
+  PRY-04 amplíe la captura de «se ejecuta», y por eso las barandas de SRV-03 se
+  corrieron sin ese escenario. Sus demás pasos ya existen. Como el `xdg-open`
+  de prueba dura muy poco para verlo leyendo los procesos cada 10 ms, el paso
+  final suma su propia anotación de cómo lo llamaron, que además prueba que el
+  navegador sí se llamó. SRV-03.3 es del recorrido completo (D-21).
+
 - **D-23.** Escucha en loopback (SRV-02). `osr` pide al sistema un puerto
   efímero en `127.0.0.1` y toma el mismo en `[::1]`, y si ese está ocupado en
   IPv6 suelta los dos y prueba otro, hasta 10 veces. Se toma como falta de IPv6

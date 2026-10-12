@@ -3,6 +3,8 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use cucumber::gherkin::Step;
@@ -193,4 +195,107 @@ fn puertos_distintos(mundo: &mut Mundo, total: usize, distintos: usize) {
     assert_eq!(mundo.anotados.len(), total);
     let puertos: BTreeSet<u16> = mundo.anotados.iter().map(|(p, _)| *p).collect();
     assert!(puertos.len() >= distintos, "{puertos:?}");
+}
+
+#[given(
+    regex = r"^osr se arrancó con `(osr --sin-navegador)` y se cerró de forma ordenada, anotando su token como \{token anterior\}$"
+)]
+fn arranco_y_cerro(mundo: &mut Mundo, orden: String) {
+    mundo.arrancar_y_cerrar(&orden);
+    mundo.token_anterior = mundo.token.clone();
+}
+
+#[then(expr = "los {int} tokens anotados son distintos")]
+fn tokens_distintos(mundo: &mut Mundo, total: usize) {
+    let tokens: BTreeSet<&String> = mundo.anotados.iter().map(|(_, t)| t).collect();
+    assert_eq!((mundo.anotados.len(), tokens.len()), (total, total));
+}
+
+#[then(expr = "cada token anotado tiene {int} caracteres")]
+fn largo_de_cada_token(mundo: &mut Mundo, largo: usize) {
+    for (_, token) in &mundo.anotados {
+        assert_eq!(token.chars().count(), largo, "{token}");
+    }
+}
+
+/// Los caracteres de una lista como "A-Z a-z 0-9 - _", con rangos y sueltos
+/// separados por espacios.
+fn caracteres(lista: &str) -> BTreeSet<char> {
+    let mut permitidos = BTreeSet::new();
+    for parte in lista.split(' ') {
+        match parte.chars().collect::<Vec<_>>().as_slice() {
+            [desde, '-', hasta] => permitidos.extend(*desde..=*hasta),
+            [suelto] => {
+                permitidos.insert(*suelto);
+            }
+            _ => panic!("no se entiende {parte:?}"),
+        }
+    }
+    permitidos
+}
+
+#[then(expr = "cada token anotado tiene solo caracteres de {string}")]
+fn alfabeto_de_cada_token(mundo: &mut Mundo, lista: String) {
+    let permitidos = caracteres(&lista);
+    assert_eq!(permitidos.len(), 64);
+    for (_, token) in &mundo.anotados {
+        assert!(token.chars().all(|c| permitidos.contains(&c)), "{token}");
+    }
+}
+
+/// El `xdg-open` de prueba que ponen todos los escenarios ya anota cómo lo
+/// llamaron, en `navegador.log` de la carpeta aparte.
+#[given(
+    "el navegador predeterminado del sistema de prueba es un programa que anota cómo lo llamaron"
+)]
+fn navegador_que_anota(mundo: &mut Mundo) {
+    assert!(!mundo.sin_navegador);
+    assert!(mundo.aparte.path().join("bin/xdg-open").is_file());
+}
+
+/// Lee `/proc/*/cmdline` cada 10 ms en un hilo aparte hasta que el escenario
+/// lo detiene, y junta cada línea de órdenes distinta.
+#[given("la prueba lee la línea de órdenes de todos los procesos del sistema cada 10 ms")]
+fn lee_lineas_de_ordenes(mundo: &mut Mundo) {
+    let seguir = Arc::new(AtomicBool::new(true));
+    let sigue = Arc::clone(&seguir);
+    let hilo = std::thread::spawn(move || {
+        let mut leidas = BTreeSet::new();
+        while sigue.load(Ordering::Relaxed) {
+            for proceso in fs::read_dir("/proc").into_iter().flatten().flatten() {
+                if let Ok(linea) = fs::read(proceso.path().join("cmdline")) {
+                    leidas.insert(String::from_utf8_lossy(&linea).replace('\0', " "));
+                }
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        leidas
+    });
+    mundo.lector_de_ordenes = Some((seguir, hilo));
+}
+
+#[when(expr = "pasan {int} s")]
+fn pasan(_mundo: &mut Mundo, segundos: u64) {
+    std::thread::sleep(Duration::from_secs(segundos));
+}
+
+#[then("ninguna línea de órdenes leída contiene el token de la sesión")]
+fn ninguna_linea_con_el_token(mundo: &mut Mundo) {
+    let (seguir, hilo) = mundo
+        .lector_de_ordenes
+        .take()
+        .expect("falta el lector de órdenes");
+    seguir.store(false, Ordering::Relaxed);
+    let mut leidas = hilo.join().expect("el lector de órdenes falló");
+    let token = mundo.token.clone().expect("osr no escribió su token");
+    // El navegador de prueba dura muy poco para verlo cada 10 ms, así que se
+    // suma su propia anotación de cómo lo llamaron, que además prueba que hubo
+    // un llamado.
+    let llamados = fs::read_to_string(mundo.aparte.path().join("navegador.log"))
+        .expect("nadie llamó al navegador");
+    leidas.insert(llamados);
+    assert!(
+        !leidas.iter().any(|l| l.contains(&token)),
+        "el token apareció en una línea de órdenes"
+    );
 }

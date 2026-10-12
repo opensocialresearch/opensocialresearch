@@ -8,12 +8,15 @@ mod http;
 mod orden;
 mod servidor;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use cucumber::World;
@@ -51,6 +54,11 @@ pub struct Mundo {
     token: Option<String>,
     /// El puerto y el token de cada arranque de «osr se arranca N veces».
     anotados: Vec<(u16, String)>,
+    /// `{token anterior}`, el de un arranque previo ya cerrado.
+    token_anterior: Option<String>,
+    /// El hilo que lee las líneas de órdenes de todos los procesos y la
+    /// bandera que lo detiene.
+    lector_de_ordenes: Option<(Arc<AtomicBool>, JoinHandle<BTreeSet<String>>)>,
     /// Lo que pasó con la conexión TCP que intentó la prueba.
     conexion: Option<String>,
     /// Si `osr` corre sin ningún navegador en el `PATH` (SRV-01.3).
@@ -79,6 +87,8 @@ impl Mundo {
             token: None,
             anotados: Vec::new(),
             conexion: None,
+            token_anterior: None,
+            lector_de_ordenes: None,
             sin_navegador: false,
             pedido: None,
             respuesta: None,
@@ -124,6 +134,9 @@ impl Mundo {
     fn resolver(&self, texto: &str) -> String {
         let mut texto = texto.replace("{201 veces la letra a}", &"a".repeat(201));
         texto = texto.replace("{Uno, salto de línea, Dos}", "Uno\nDos");
+        if let Some(anterior) = &self.token_anterior {
+            texto = texto.replace("{token anterior}", anterior);
+        }
         if let (Some(puerto), Some(token)) = (self.puerto, &self.token) {
             texto = texto.replace("{P+1}", &(puerto + 1).to_string());
             texto = texto.replace("{P}", &puerto.to_string());

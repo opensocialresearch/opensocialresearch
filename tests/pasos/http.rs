@@ -106,6 +106,12 @@ impl Pedido {
     }
 }
 
+#[given(expr = "el pedido lleva el encabezado {string} con valor {string}")]
+fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
+    let valor = mundo.resolver(&valor);
+    mundo.encabezado(&nombre, valor);
+}
+
 #[when("se manda el pedido")]
 async fn se_manda(mundo: &mut Mundo) {
     let pedido = mundo.pedido.as_ref().expect("falta «un pedido HTTP»");

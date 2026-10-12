@@ -213,6 +213,44 @@ sí, cifradas, y cada quien conserva su copia completa.
 - Quién puede ver qué, por ejemplo los audios con nombres frente a las
   transcripciones anonimizadas, se define por proyecto.
 
+## Tecnología
+
+Elegida para que corra en computadoras modestas y para usar lo que ya existe.
+
+- **Orquestador en Rust**, un solo programa por sistema operativo que levanta
+  el servidor local y maneja todo lo demás. Un servidor así ocupa del orden de
+  10 MB de memoria en reposo.
+- **Interfaz en Svelte**, que compila a JavaScript pequeño. Mapas con
+  MapLibre, que se cargan solo cuando se abren, y vistas que dibujan solo lo
+  visible en transcripciones y documentos largos.
+- **R y Python como motores de análisis**, por el protocolo de Jupyter
+  (IRkernel e ipykernel). Los entornos se manejan con uv para Python y con rig
+  y rv para R, usando paquetes ya compilados para no compilar nada en la
+  máquina de quien investiga. Lo que la computadora no aguante se manda a
+  cómputo externo.
+- **Quarto para los documentos**. Ya resuelve citas con Zotero y CSL,
+  referencias cruzadas, incrustar resultados de notebooks, PDF por medio de
+  Typst sin instalar LaTeX y sitios web de divulgación. La herramienta lo
+  instala y lo maneja como hace con R y Python.
+- **Automerge para la colaboración**, la estructura de datos que une sola los
+  cambios de varias personas, del mismo grupo de investigación que propuso el
+  software local-first. Los documentos se escriben en el formato de Quarto
+  sobre un editor de texto colaborativo.
+- **iroh para conectar las computadoras del equipo**, directo y cifrado,
+  buscándolas por una llave y no por su dirección de internet.
+- **Un proyecto es una carpeta**, con los documentos colaborativos y los
+  archivos del proyecto. SQLite queda solo como índice interno, que la
+  herramienta puede reconstruir.
+- **whisper.cpp para transcribir** en la propia computadora, con el tamaño de
+  modelo que la máquina aguante.
+- **La API local de Zotero** para buscar, citar y agregar referencias.
+- **Catálogos de datos por protocolo, no por sitio.** Muchos repositorios usan
+  el mismo programa o el mismo estándar de metadatos, así que un conector sirve
+  para muchos. El archivo de microdatos del INEC funciona con NADA, el
+  catálogo que usan varias oficinas de estadística, y describe sus encuestas
+  con el estándar DDI. Muchos portales de datos abiertos usan CKAN y muchos
+  repositorios universitarios usan Dataverse.
+
 ## Licencia
 
 El código se publica con licencia MIT. Cualquiera puede usarlo, modificarlo,
@@ -222,11 +260,13 @@ que la herramienta llegue lo más lejos posible.
 
 ## Decisiones abiertas
 
-- **Tecnología** de la web, de la aplicación móvil y del motor de análisis.
-- **Dónde viven los datos**, en la computadora de quien investiga, en un
-  servidor propio o en ambos con sincronización.
-- **Motor de documentos** para el PDF y el sitio web.
-- **Dominio** del proyecto.
+- **Aplicación móvil**, con qué tecnología y cómo se sincroniza con la
+  computadora.
+- **Permisos dentro de un equipo**, cómo se dan y se quitan accesos a datos
+  sensibles sin un servidor central.
+- **Editor visual de documentos**, además del editor de texto con formato de
+  Quarto.
+- **Dominio** del proyecto, que se deja para más adelante.
 
 ## Referencias
 

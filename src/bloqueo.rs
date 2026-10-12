@@ -120,24 +120,42 @@ mod pruebas {
     }
 
     const HIJA: &str = "OSR_PRUEBA_BLOQUEO_HIJA";
+    const LISTA: &str = "OSR_PRUEBA_BLOQUEO_LISTA";
 
     /// Otro proceso con el mismo programa que las pruebas, que duerme lo que
-    /// diga la variable `HIJA`, en milisegundos.
+    /// diga la variable `HIJA`, en milisegundos. Antes crea el archivo de
+    /// `LISTA`, para avisar que ya corre el programa y no la copia del fork,
+    /// que todavía tiene el nombre del hilo que la lanzó.
     #[test]
     fn hija() {
         if let Some(ms) = std::env::var_os(HIJA) {
+            if let Some(lista) = std::env::var_os(LISTA) {
+                fs::write(lista, "").unwrap();
+            }
             let ms: u64 = ms.to_str().unwrap().parse().unwrap();
             std::thread::sleep(Duration::from_millis(ms));
         }
     }
 
     fn lanzar_hija(ms: u64) -> Child {
-        Command::new(std::env::current_exe().unwrap())
+        let tmp = carpeta();
+        let lista = tmp.path().join("lista");
+        let hija = Command::new(std::env::current_exe().unwrap())
             .args(["--exact", "bloqueo::pruebas::hija", "--quiet"])
             .env(HIJA, ms.to_string())
+            .env(LISTA, &lista)
             .stdout(std::process::Stdio::null())
             .spawn()
-            .unwrap()
+            .unwrap();
+        let inicio = Instant::now();
+        while !lista.exists() {
+            assert!(
+                inicio.elapsed() < Duration::from_secs(10),
+                "la hija no arrancó"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        hija
     }
 
     #[test]

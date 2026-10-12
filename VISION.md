@@ -117,6 +117,13 @@ Todo llega al mismo proyecto, audios, transcripciones, documentos, tablas,
 capas geográficas, imágenes y textos de prensa o redes, con su origen y su
 estado de anonimización.
 
+Además de los datos propios, la herramienta conecta con repositorios de datos
+abiertos para explorar qué bases existen y pueden servir a la investigación,
+como los microdatos de las encuestas del INEC, portales de datos abiertos del
+Estado y repositorios académicos. Se puede buscar por tema, ver las variables
+de una base antes de descargarla, y traerla al proyecto con su ficha y su
+cita.
+
 ### 6. Transcripción
 
 Transcripción automática de entrevistas en español, que corre en la computadora

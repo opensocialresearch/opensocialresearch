@@ -412,3 +412,34 @@ fn es_pagina_con(respuesta: &Respuesta, texto: &str, camino: &str) {
         respuesta.cuerpo
     );
 }
+
+/// Anota cuándo se mandó la señal y cuántas líneas tenía el registro técnico.
+#[when("se envía SIGTERM al proceso osr")]
+fn envia_sigterm(mundo: &mut Mundo) {
+    mundo.lineas_del_registro = mundo.registro_tecnico().lines().count();
+    let osr = mundo.osr.as_ref().expect("falta «se ejecuta»");
+    super::sigterm(osr);
+    mundo.senal_enviada = Some(Instant::now());
+}
+
+#[then(expr = "osr termina con código de salida {int} a más tardar {int} s después")]
+fn termina_a_tiempo(mundo: &mut Mundo, codigo: i32, segundos: u64) {
+    let enviada = mundo.senal_enviada.expect("falta «se envía SIGTERM»");
+    let limite = Duration::from_secs(segundos).saturating_sub(enviada.elapsed());
+    let osr = mundo.osr.as_mut().expect("falta «se ejecuta»");
+    let terminado = super::esperar(osr, limite);
+    assert!(enviada.elapsed() <= Duration::from_secs(segundos));
+    assert_eq!(
+        terminado,
+        Some(codigo),
+        "osr no terminó a tiempo con ese código"
+    );
+    mundo.codigo = terminado;
+}
+
+#[then("el registro técnico tiene una línea nueva que anota el cierre")]
+fn registro_anota_el_cierre(mundo: &mut Mundo) {
+    let registro = mundo.registro_tecnico();
+    let nuevas: Vec<&str> = registro.lines().skip(mundo.lineas_del_registro).collect();
+    assert!(nuevas.iter().any(|l| l.contains("cierre")), "{nuevas:?}");
+}

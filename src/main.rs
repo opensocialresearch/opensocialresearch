@@ -1,6 +1,7 @@
 //! `osr`, el programa de Open Social Research.
 
 mod arranque;
+mod cierre;
 mod escucha;
 mod estado;
 mod navegador;

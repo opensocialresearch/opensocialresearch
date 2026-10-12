@@ -6,6 +6,17 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-26.** Cierre ordenado (SRV-15). Con la primera SIGINT o SIGTERM los
+  servidores dejan de aceptar conexiones y terminan los pedidos en curso, con
+  una espera de 2 s como máximo para que todo el cierre quepa en los 3 s. Después
+  `osr` borra el bloqueo, anota `cierre ordenado` en el registro técnico y
+  termina con 0. Si llega una segunda señal durante esa espera, la corta en el
+  acto, borra igual el bloqueo, anota `cierre forzado por una segunda señal` y
+  termina con 1, porque la especificación no fija el código y un 0 diría que
+  el cierre fue completo. Todavía no hay escrituras pendientes que terminar,
+  llegan con PRY-12 y PRY-13. El aviso de la pestaña es de la interfaz
+  (SRV-15.3) y llega con ella.
+
 - **D-25.** Token en todas las rutas (SRV-05). El servidor arma sus rutas solo
   desde la lista de `src/rutas.rs`, que no depende de nada del programa, y la
   prueba incluye ese mismo archivo con `#[path]`, así la lista sale de la
@@ -79,6 +90,10 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
   tower como dependencia de desarrollo, ya presente por axum, para probar las
   rutas sin abrir un puerto.
 
+- **D-19, agregado.** Se suma tower 0.5 como dependencia de desarrollo, con
+  su función `util`, para mandar pedidos a las rutas del servidor en las
+  pruebas unitarias sin abrir un puerto. Ya venía en el árbol por axum, así que
+  no agrega código nuevo al programa (D-22).
 - **D-21.** Los escenarios `@recorrido-completo` no entran en la corrida
   estricta de cada requisito, porque se verifican sobre el proyecto de prueba
   después de ejecutar todas las acciones del tramo, y ese recorrido no existe

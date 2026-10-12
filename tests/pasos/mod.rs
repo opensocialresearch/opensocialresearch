@@ -70,6 +70,9 @@ pub struct Mundo {
     /// de cada camino al pedido que les mandó el escenario.
     lista_de_rutas: Vec<(String, String)>,
     respuestas: Vec<(String, http::Respuesta)>,
+    /// Cuándo se mandó SIGTERM y cuántas líneas tenía antes el registro técnico.
+    senal_enviada: Option<Instant>,
+    lineas_del_registro: usize,
     /// Las familias de rutas que el escenario ya revisó por su nombre.
     familias_vistas: Vec<String>,
 }
@@ -101,6 +104,8 @@ impl Mundo {
             lista_de_rutas: Vec::new(),
             respuestas: Vec::new(),
             familias_vistas: Vec::new(),
+            senal_enviada: None,
+            lineas_del_registro: 0,
         }
     }
 
@@ -174,6 +179,12 @@ impl Mundo {
 
 impl Drop for Mundo {
     fn drop(&mut self) {
+        // Un escenario que no llegó a su último paso deja el lector de
+        // órdenes corriendo; se detiene para no gastar en el resto de la corrida.
+        if let Some((seguir, hilo)) = self.lector_de_ordenes.take() {
+            seguir.store(false, std::sync::atomic::Ordering::Relaxed);
+            let _ = hilo.join();
+        }
         if let Some(mut osr) = self.osr.take() {
             orden::terminar(&mut osr);
         }

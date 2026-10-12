@@ -32,10 +32,11 @@ epistemologías.
 
 ## Estado
 
-Recién creado (2026-10-11). Por ahora hay dos documentos, la visión en
+Recién creado (2026-10-11). Por ahora hay tres documentos, la visión en
 [VISION.md](VISION.md), con los principios, el ciclo de investigación y la
 tecnología, y el documento de producto en [PRODUCTO.md](PRODUCTO.md), con el
-alcance de cada versión, los requisitos y las decisiones abiertas.
+alcance de cada versión, los requisitos y las decisiones abiertas, y el método
+de desarrollo con agentes en [DESARROLLO.md](DESARROLLO.md).
 
 ## Licencia
 

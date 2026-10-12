@@ -4,6 +4,29 @@ Registro de las decisiones del proyecto, de la más reciente a la más antigua.
 Cada cambio de alcance, de umbral, de herramienta o de especificación aprobada
 se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
+## 2026-10-12 · Primer requisito implementado (PRY-01)
+
+- **D-20.** Las definiciones de pasos se acotan a lo que ya está implementado.
+  Un paso compartido entre requisitos, como «se ejecuta `...`», captura solo
+  las órdenes que existen (hoy `osr nuevo`), para que los escenarios de
+  requisitos pendientes queden omitidos y no fallidos. Quien implemente una
+  orden nueva amplía la captura. Se descartó que el modo no estricto tolere
+  fallas fuera de la etiqueta en curso, porque escondería regresiones.
+- **D-17, precisión.** `osr nuevo` no anota `verificacion`, porque un proyecto
+  recién creado no tiene nada que verificar. El evento lo anota cada apertura
+  de un proyecto existente con `osr abrir`, y así PRY-01.6 sigue pidiendo una
+  sola línea.
+- **D-19, agregado.** Se suma jiff para la fecha y hora con desplazamiento
+  local, que la biblioteca estándar no da y que piden `creado` en PRY-03, la
+  fecha del registro en PRY-08 y las marcas de PRY-02.
+- **Barandas, arreglo.** El paso de mutación no probaba nada, porque la
+  configuración de git del equipo usa prefijos mnemónicos en los diffs y
+  cargo-mutants no reconocía los archivos, y en la integración continua
+  fallaba por pasar `-q` junto con el `--verbose` de cargo-mutants. Se fijaron
+  los prefijos y se quitó `-q`. Los umbrales no cambiaron.
+- La integración continua habilita los espacios de nombres sin privilegios que
+  usa el escenario de disco lleno (PRY-01.5).
+
 ## 2026-10-11 · Arranque del código
 
 - **D-18.** Los escenarios con archivos de varios gigabytes o audios largos se

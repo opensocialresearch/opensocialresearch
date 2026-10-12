@@ -1,0 +1,14 @@
+formato = "osr-ficha"
+version_formato = 1
+tipo = "audio_entrevista"
+archivo = "E01.ogg"
+sha256 = "5001e5675130197200d728e85765526161fcd78207e3cfc87200675e820a20f3"
+bytes = 230848
+formato_archivo = "ogg"
+importado = 2026-10-06T10:04:40-06:00
+fecha_material = 2026-10-03
+seudonimo = "E01"
+consentimiento = "participantes/consentimientos.csv"
+nombre_original = "grabación Carla Supuesta Vega.ogg"
+duracion_s = 64.3
+estado = "presente"

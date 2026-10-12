@@ -1,0 +1,49 @@
+{
+ "turnos": [
+  [
+   0.5,
+   2.482,
+   0
+  ],
+  [
+   3.082,
+   4.364,
+   1
+  ],
+  [
+   4.964,
+   8.347,
+   0
+  ],
+  [
+   8.947,
+   11.016,
+   1
+  ]
+ ],
+ "frases": [
+  {
+   "sp": 0,
+   "start": 0.5,
+   "end": 2.48,
+   "text": "Buenas tardes, gracias por recibirme."
+  },
+  {
+   "sp": 1,
+   "start": 3.08,
+   "text": "Con gusto, pase adelante."
+  },
+  {
+   "sp": 0,
+   "start": 4.96,
+   "end": 8.35,
+   "text": "Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?"
+  },
+  {
+   "sp": 1,
+   "start": 8.95,
+   "end": 11.02,
+   "text": "Sí, Ana Inventada Muñoz, para servirle."
+  }
+ ]
+}

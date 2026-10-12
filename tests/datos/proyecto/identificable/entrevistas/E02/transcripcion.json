@@ -1,0 +1,170 @@
+{
+  "formato": "osr-transcripcion",
+  "version_formato": 1,
+  "entrevista": "E02",
+  "audio": "E02.m4a",
+  "audio_sha256": "310dd4556b08d9f43cf13023d5af473d3419f968db2214b958f041e5a602e07b",
+  "importacion": "origen/20261006T103000",
+  "modelo": "large-v3-turbo",
+  "estado": "sin_revisar",
+  "modificada": false,
+  "revisada_en": null,
+  "sin_revisar_al_cerrar": null,
+  "tiempo_revision_s": 0,
+  "reglas_sospecha": {
+    "aplicadas": [
+      "repeticion"
+    ],
+    "omitidas": [
+      "sin_voz",
+      "compresion"
+    ]
+  },
+  "siguiente_id": 13,
+  "segmentos": [
+    {
+      "id": "s0001",
+      "inicio": 0.5,
+      "fin": 2.6,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "Buenas noches, ¿tiene un minuto para conversar?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0002",
+      "inicio": 3.2,
+      "fin": 4.74,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "Sí, un ratito, voy para la parada.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0003",
+      "inicio": 5.34,
+      "fin": 6.61,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "¿Me dice su nombre, por favor?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0004",
+      "inicio": 7.21,
+      "fin": 8.35,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "Bruno Ficticio Ramírez.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0005",
+      "inicio": 8.95,
+      "fin": 10.3,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "¿Toma el bus aquí todos los días?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0006",
+      "inicio": 10.9,
+      "fin": 12.53,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "De lunes a viernes, a las seis y media.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0007",
+      "inicio": 13.13,
+      "fin": 14.79,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "¿Cómo se siente esperando a esa hora?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0008",
+      "inicio": 15.39,
+      "fin": 18.05,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "Incómodo. La parada está oscura y uno no ve quién viene.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0009",
+      "inicio": 18.66,
+      "fin": 19.81,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "¿Ha tenido algún problema?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0010",
+      "inicio": 20.41,
+      "fin": 23.46,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "A mí no, pero a un compañero le quitaron el teléfono el mes pasado.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0011",
+      "inicio": 24.06,
+      "fin": 26.41,
+      "hablante": "entrevistadora",
+      "hablante_origen": "1",
+      "texto": "Gracias, don Bruno. Que tenga buen viaje.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0012",
+      "inicio": 27.01,
+      "fin": 28.13,
+      "hablante": "entrevistada",
+      "hablante_origen": "0",
+      "texto": "Gracias, igualmente.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    }
+  ]
+}

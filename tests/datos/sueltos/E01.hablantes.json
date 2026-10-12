@@ -1,0 +1,281 @@
+{
+ "turnos": [
+  [
+   0.5,
+   2.482,
+   0
+  ],
+  [
+   3.082,
+   4.364,
+   1
+  ],
+  [
+   4.964,
+   8.347,
+   0
+  ],
+  [
+   8.947,
+   11.016,
+   1
+  ],
+  [
+   11.616,
+   13.565,
+   0
+  ],
+  [
+   14.165,
+   16.908,
+   1
+  ],
+  [
+   17.508,
+   19.581,
+   0
+  ],
+  [
+   20.181,
+   23.436,
+   1
+  ],
+  [
+   24.036,
+   25.225,
+   0
+  ],
+  [
+   25.825,
+   29.23,
+   1
+  ],
+  [
+   29.83,
+   31.312,
+   0
+  ],
+  [
+   31.912,
+   32.396,
+   1
+  ],
+  [
+   34.196,
+   34.671,
+   1
+  ],
+  [
+   35.271,
+   36.357,
+   0
+  ],
+  [
+   36.957,
+   39.747,
+   1
+  ],
+  [
+   40.347,
+   42.264,
+   0
+  ],
+  [
+   42.864,
+   45.406,
+   1
+  ],
+  [
+   46.006,
+   46.785,
+   0
+  ],
+  [
+   47.385,
+   49.518,
+   1
+  ],
+  [
+   50.118,
+   51.77,
+   0
+  ],
+  [
+   52.37,
+   54.381,
+   1
+  ],
+  [
+   54.981,
+   56.529,
+   0
+  ],
+  [
+   57.129,
+   59.361,
+   1
+  ],
+  [
+   59.961,
+   62.004,
+   0
+  ],
+  [
+   62.604,
+   63.659,
+   1
+  ]
+ ],
+ "frases": [
+  {
+   "sp": 0,
+   "start": 0.5,
+   "end": 2.48,
+   "text": "Buenas tardes, gracias por recibirme."
+  },
+  {
+   "sp": 1,
+   "start": 3.08,
+   "end": 4.36,
+   "text": "Con gusto, pase adelante."
+  },
+  {
+   "sp": 0,
+   "start": 4.96,
+   "end": 8.35,
+   "text": "Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?"
+  },
+  {
+   "sp": 1,
+   "start": 8.95,
+   "end": 11.02,
+   "text": "Sí, Ana Inventada Muñoz, para servirle."
+  },
+  {
+   "sp": 0,
+   "start": 11.62,
+   "end": 13.56,
+   "text": "¿Cuánto tiempo tiene de vivir en este barrio?"
+  },
+  {
+   "sp": 1,
+   "start": 14.16,
+   "end": 16.91,
+   "text": "Ya van a ser doce años. Llegué cuando nació mi hija."
+  },
+  {
+   "sp": 0,
+   "start": 17.51,
+   "end": 19.58,
+   "text": "¿Cómo se siente al caminar por aquí en la noche?"
+  },
+  {
+   "sp": 1,
+   "start": 20.18,
+   "end": 23.44,
+   "text": "Depende de la calle. Por la avenida principal me siento tranquila."
+  },
+  {
+   "sp": 0,
+   "start": 24.04,
+   "end": 25.23,
+   "text": "¿Y por las calles de atrás?"
+  },
+  {
+   "sp": 1,
+   "start": 25.82,
+   "end": 29.23,
+   "text": "Ahí no tanto. Hay poca luz y casi nadie pasa después de las ocho."
+  },
+  {
+   "sp": 0,
+   "start": 29.83,
+   "end": 31.31,
+   "text": "¿Ha cambiado eso con los años?"
+  },
+  {
+   "sp": 1,
+   "start": 31.91,
+   "end": 32.4,
+   "text": "Sí, claro."
+  },
+  {
+   "sp": 1,
+   "start": 34.2,
+   "end": 34.67,
+   "text": "Sí, claro."
+  },
+  {
+   "sp": 0,
+   "start": 35.27,
+   "end": 36.36,
+   "text": "¿Qué cambió exactamente?"
+  },
+  {
+   "sp": 1,
+   "start": 36.96,
+   "end": 39.75,
+   "text": "Cerraron la pulpería de la esquina y la parada quedó sola."
+  },
+  {
+   "sp": 0,
+   "start": 40.35,
+   "end": 42.26,
+   "text": "¿Qué hace usted para sentirse más segura?"
+  },
+  {
+   "sp": 1,
+   "start": 42.86,
+   "end": 45.41,
+   "text": "Camino con el teléfono en la mano y aviso cuando salgo."
+  },
+  {
+   "sp": 0,
+   "start": 46.01,
+   "end": 46.78,
+   "text": "¿A quién le avisa?"
+  },
+  {
+   "sp": 1,
+   "start": 47.38,
+   "end": 49.52,
+   "text": "A mi vecina. Nos escribimos por mensaje."
+  },
+  {
+   "sp": 0,
+   "start": 50.12,
+   "end": 51.77,
+   "text": "¿Hay algún lugar que evite por completo?"
+  },
+  {
+   "sp": 1,
+   "start": 52.37,
+   "end": 54.38,
+   "text": "El puente del río. De noche no paso por ahí."
+  },
+  {
+   "sp": 0,
+   "start": 54.98,
+   "end": 56.53,
+   "text": "¿Qué cambiaría primero si pudiera?"
+  },
+  {
+   "sp": 1,
+   "start": 57.13,
+   "end": 59.36,
+   "text": "Más luz en las aceras y que la parada tenga techo."
+  },
+  {
+   "sp": 0,
+   "start": 59.96,
+   "end": 62.0,
+   "text": "Muchas gracias por su tiempo, doña Ana."
+  },
+  {
+   "sp": 1,
+   "start": 62.6,
+   "end": 63.66,
+   "text": "A usted, que le vaya bien."
+  }
+ ]
+}

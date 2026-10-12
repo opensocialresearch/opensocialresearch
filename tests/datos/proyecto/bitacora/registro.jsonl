@@ -1,0 +1,14 @@
+{"fecha":"2026-10-05T09:00:00-06:00","tipo":"proyecto_creado","detalle":{}}
+{"fecha":"2026-10-05T09:04:10-06:00","tipo":"participante_creado","detalle":{"seudonimo":"E01"}}
+{"fecha":"2026-10-05T09:05:02-06:00","tipo":"correspondencia_modificada","detalle":{"seudonimo":"E01","campos":["nombre","contacto","nota"]}}
+{"fecha":"2026-10-05T09:07:45-06:00","tipo":"consentimiento_registrado","detalle":{"seudonimo":"E01","version_formulario":"v1, octubre","fecha":"2026-10-03","modalidad":"escrito","alcances":{"grabar":"otorgado","citar_textualmente":"otorgado","usar_puntos_mapa":"no_consultado","archivar":"otorgado","reutilizar":"denegado"}}}
+{"fecha":"2026-10-05T09:10:20-06:00","tipo":"participante_creado","detalle":{"seudonimo":"E02"}}
+{"fecha":"2026-10-05T09:11:03-06:00","tipo":"correspondencia_modificada","detalle":{"seudonimo":"E02","campos":["nombre","contacto","nota"]}}
+{"fecha":"2026-10-05T09:13:30-06:00","tipo":"consentimiento_registrado","detalle":{"seudonimo":"E02","version_formulario":"v1, octubre","fecha":"2026-10-04","modalidad":"oral_grabado","alcances":{"grabar":"otorgado","citar_textualmente":"denegado","usar_puntos_mapa":"no_consultado","archivar":"otorgado","reutilizar":"no_consultado"}}}
+{"fecha":"2026-10-06T10:00:00-06:00","tipo":"verificacion","detalle":{"modificados_fuera":[],"con_error":[],"faltantes":[],"originales_alterados":[],"no_registrados":0,"temporales_eliminados":0}}
+{"fecha":"2026-10-06T10:02:15-06:00","tipo":"entrevista_creada","detalle":{"entrevista":"E01"}}
+{"fecha":"2026-10-06T10:04:40-06:00","tipo":"audio_importado","detalle":{"entrevista":"E01","formato":"ogg","bytes":230848,"sha256":"5001e5675130197200d728e85765526161fcd78207e3cfc87200675e820a20f3","duracion_s":64.3}}
+{"fecha":"2026-10-06T10:15:00-06:00","tipo":"transcripcion_importada","detalle":{"entrevista":"E01","fuente":"cadena_hablantes","segmentos":25,"marca":"20261006T101500"}}
+{"fecha":"2026-10-06T10:20:05-06:00","tipo":"entrevista_creada","detalle":{"entrevista":"E02"}}
+{"fecha":"2026-10-06T10:22:30-06:00","tipo":"audio_importado","detalle":{"entrevista":"E02","formato":"m4a","bytes":204251,"sha256":"310dd4556b08d9f43cf13023d5af473d3419f968db2214b958f041e5a602e07b","duracion_s":28.7}}
+{"fecha":"2026-10-06T10:30:00-06:00","tipo":"transcripcion_importada","detalle":{"entrevista":"E02","fuente":"cadena_hablantes","segmentos":12,"marca":"20261006T103000"}}

@@ -6,6 +6,35 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-37.** Datos de prueba (PRY-17). Viven en `tests/datos/`, con el
+  `LEEME` en la raíz, los guiones y los generadores en `fuentes/`, los
+  archivos sueltos en `sueltos/` y el proyecto de prueba en `proyecto/`. El
+  audio es voz sintética de Supertonic 3, cuya licencia OpenRAIL-M no reclama
+  derechos sobre lo que se genera, y todo se publica bajo CC0 1.0. Se eligió
+  frente a la voz de Piper `es_MX-ald-x_low` porque esa tiene una sola voz y
+  hacían falta tres. Cada intervención se sintetiza aparte y se une con
+  pausas conocidas, así los tiempos de la cadena salen exactos por
+  construcción, sin pasar el audio por Whisper ni por la diarización, que no
+  darían a propósito los segmentos repetidos y las métricas de TRA-14.
+  `sintetizar.py` necesita el modelo y se corre solo si cambian los guiones;
+  `generar.py` usa solo la biblioteca estándar y ffmpeg, y es determinista.
+  El proyecto de prueba se escribe a mano contra las especificaciones,
+  partiendo de lo que crea `osr nuevo` (la opción `--comprobar-base` avisa si
+  las plantillas de la app cambian), y cuando existan PAR y TRA el código
+  tendrá que producir exactamente esos archivos. Git no guarda permisos ni
+  carpetas vacías, y un `.gitkeep` rompería PRY-11.5 y PRY-11.6, así que el
+  paso «una copia del proyecto de prueba» crea las carpetas vacías de PRY-02 y
+  `.osr/`, y fija los permisos de SRV-13. `.osr/indice.sqlite` no se guarda en
+  el repositorio, porque es reconstruible (PRY-10). Los nombres originales de
+  los archivos importados del proyecto usan el segundo conjunto de nombres,
+  para que PAR-12.1 no confunda `E01.ogg` con un nombre original.
+  `muchos.whisper.json` (20.001 segmentos, 1 MB) queda en el repositorio, y
+  `grande.whisper.json` (más de 50 MB) lo crea la prueba como archivo
+  disperso. Quedan anotadas para TRA-04 y TRA-05 dos tensiones de orden: el
+  reconocimiento de `cadena_hablantes` exige `start` y `end` numéricos, pero
+  TRA-05.1 espera que `campo-faltante.hablantes.json` llegue a la validación,
+  y `vacio.whisper.json` solo se reconoce si una lista vacía cumple la regla.
+
 - **D-36.** Prueba de la rotación y de la umask (SRV-12). Los 300.000
   pedidos de SRV-12.2 salen por ocho conexiones keep-alive de un solo cliente,
   cada una con su parte en orden, porque abrir una conexión por pedido deja

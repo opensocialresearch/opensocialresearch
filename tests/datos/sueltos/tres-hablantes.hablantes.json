@@ -1,0 +1,72 @@
+{
+ "turnos": [
+  [
+   0.47,
+   5.1,
+   0
+  ],
+  [
+   6.47,
+   11.1,
+   1
+  ],
+  [
+   12.47,
+   17.1,
+   2
+  ],
+  [
+   18.47,
+   23.1,
+   0
+  ],
+  [
+   24.47,
+   29.1,
+   1
+  ],
+  [
+   30.47,
+   35.1,
+   2
+  ]
+ ],
+ "frases": [
+  {
+   "sp": 0,
+   "start": 0.5,
+   "end": 5.0,
+   "text": "Buenas tardes, ¿podemos conversar un momento?"
+  },
+  {
+   "sp": 1,
+   "start": 6.5,
+   "end": 11.0,
+   "text": "Sí, pase, estamos aquí afuera."
+  },
+  {
+   "sp": 2,
+   "start": 12.5,
+   "end": 17.0,
+   "text": "Yo también vivo aquí, soy la vecina de al lado."
+  },
+  {
+   "sp": 0,
+   "start": 18.5,
+   "end": 23.0,
+   "text": "¿Desde cuándo viven en el barrio?"
+  },
+  {
+   "sp": 1,
+   "start": 24.5,
+   "end": 29.0,
+   "text": "Desde hace doce años."
+  },
+  {
+   "sp": 2,
+   "start": 30.5,
+   "end": 35.0,
+   "text": "Yo llegué hace cinco, después de la tormenta."
+  }
+ ]
+}

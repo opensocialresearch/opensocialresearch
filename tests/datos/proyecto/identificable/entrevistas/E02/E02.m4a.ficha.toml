@@ -1,0 +1,14 @@
+formato = "osr-ficha"
+version_formato = 1
+tipo = "audio_entrevista"
+archivo = "E02.m4a"
+sha256 = "310dd4556b08d9f43cf13023d5af473d3419f968db2214b958f041e5a602e07b"
+bytes = 204251
+formato_archivo = "m4a"
+importado = 2026-10-06T10:22:30-06:00
+fecha_material = 2026-10-04
+seudonimo = "E02"
+consentimiento = "participantes/consentimientos.csv"
+nombre_original = "entrevista con Nombre Inventado.m4a"
+duracion_s = 28.7
+estado = "presente"

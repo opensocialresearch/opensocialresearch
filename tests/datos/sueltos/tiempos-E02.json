@@ -1,0 +1,77 @@
+{
+ "duracion_s": 28.729,
+ "intervenciones": [
+  {
+   "hablante": 1,
+   "inicio": 0.5,
+   "fin": 2.603,
+   "texto": "Buenas noches, ¿tiene un minuto para conversar?"
+  },
+  {
+   "hablante": 0,
+   "inicio": 3.203,
+   "fin": 4.737,
+   "texto": "Sí, un ratito, voy para la parada."
+  },
+  {
+   "hablante": 1,
+   "inicio": 5.337,
+   "fin": 6.608,
+   "texto": "¿Me dice su nombre, por favor?"
+  },
+  {
+   "hablante": 0,
+   "inicio": 7.208,
+   "fin": 8.348,
+   "texto": "Bruno Ficticio Ramírez."
+  },
+  {
+   "hablante": 1,
+   "inicio": 8.948,
+   "fin": 10.3,
+   "texto": "¿Toma el bus aquí todos los días?"
+  },
+  {
+   "hablante": 0,
+   "inicio": 10.9,
+   "fin": 12.534,
+   "texto": "De lunes a viernes, a las seis y media."
+  },
+  {
+   "hablante": 1,
+   "inicio": 13.134,
+   "fin": 14.788,
+   "texto": "¿Cómo se siente esperando a esa hora?"
+  },
+  {
+   "hablante": 0,
+   "inicio": 15.388,
+   "fin": 18.055,
+   "texto": "Incómodo. La parada está oscura y uno no ve quién viene."
+  },
+  {
+   "hablante": 1,
+   "inicio": 18.655,
+   "fin": 19.811,
+   "texto": "¿Ha tenido algún problema?"
+  },
+  {
+   "hablante": 0,
+   "inicio": 20.411,
+   "fin": 23.464,
+   "texto": "A mí no, pero a un compañero le quitaron el teléfono el mes pasado."
+  },
+  {
+   "hablante": 1,
+   "inicio": 24.064,
+   "fin": 26.408,
+   "texto": "Gracias, don Bruno. Que tenga buen viaje."
+  },
+  {
+   "hablante": 0,
+   "inicio": 27.008,
+   "fin": 28.129,
+   "texto": "Gracias, igualmente."
+  }
+ ]
+}

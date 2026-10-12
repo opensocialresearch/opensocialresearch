@@ -1,0 +1,50 @@
+formato = "osr-importacion"
+version_formato = 1
+marca = "20261006T103000"
+fuente = "cadena_hablantes"
+modelo = "large-v3-turbo"
+markdown_alineado = "si"
+excepciones = []
+
+[[archivos]]
+tipo = "cadena_whisper"
+archivo = "E02.whisper.json"
+nombre_original = "Nombre Inventado.whisper.json"
+sha256 = "5fb7f2aada9f1db3cb5fbd70a2ddc00ef1b72cc57640ce681e1de353d435f5bc"
+bytes = 6326
+
+[[archivos]]
+tipo = "cadena_hablantes"
+archivo = "E02.hablantes.json"
+nombre_original = "Nombre Inventado.hablantes.json"
+sha256 = "feb7252828cecd78e6dc81ac47060096ffe0b014d56b1793fe372240f9c687c3"
+bytes = 1759
+
+[[archivos]]
+tipo = "cadena_markdown"
+archivo = "E02.md"
+nombre_original = "Nombre Inventado.md"
+sha256 = "ca5e1e54596ac081ba7ba6446c471db04f8d0b22504ac0f932aaa82adf2bcc7b"
+bytes = 1042
+
+[[archivos]]
+tipo = "encabezado"
+archivo = "E02.encabezado.md"
+nombre_original = "Nombre Inventado.encabezado.md"
+sha256 = "b7ae7dfcfc44429a69a203d3097ed73ba865dbffa90db43d241b7c4c9d5132d5"
+bytes = 284
+
+[[hablantes]]
+origen = "1"
+rol = "entrevistadora"
+
+[[hablantes]]
+origen = "0"
+rol = "entrevistada"
+
+[reglas_sospecha]
+aplicadas = ["repeticion"]
+omitidas = ["sin_voz", "compresion"]
+no_speech_prob = 0.6
+avg_logprob = -1.0
+compression_ratio = 2.4

@@ -1,0 +1,330 @@
+{
+  "formato": "osr-transcripcion",
+  "version_formato": 1,
+  "entrevista": "E01",
+  "audio": "E01.ogg",
+  "audio_sha256": "5001e5675130197200d728e85765526161fcd78207e3cfc87200675e820a20f3",
+  "importacion": "origen/20261006T101500",
+  "modelo": "large-v3-turbo",
+  "estado": "sin_revisar",
+  "modificada": false,
+  "revisada_en": null,
+  "sin_revisar_al_cerrar": null,
+  "tiempo_revision_s": 0,
+  "reglas_sospecha": {
+    "aplicadas": [
+      "repeticion"
+    ],
+    "omitidas": [
+      "sin_voz",
+      "compresion"
+    ]
+  },
+  "siguiente_id": 26,
+  "segmentos": [
+    {
+      "id": "s0001",
+      "inicio": 0.5,
+      "fin": 2.48,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "Buenas tardes, gracias por recibirme.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0002",
+      "inicio": 3.08,
+      "fin": 4.36,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Con gusto, pase adelante.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0003",
+      "inicio": 4.96,
+      "fin": 8.35,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0004",
+      "inicio": 8.95,
+      "fin": 11.02,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Sí, Ana Inventada Muñoz, para servirle.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0005",
+      "inicio": 11.62,
+      "fin": 13.56,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Cuánto tiempo tiene de vivir en este barrio?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0006",
+      "inicio": 14.16,
+      "fin": 16.91,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Ya van a ser doce años. Llegué cuando nació mi hija.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0007",
+      "inicio": 17.51,
+      "fin": 19.58,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Cómo se siente al caminar por aquí en la noche?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0008",
+      "inicio": 20.18,
+      "fin": 23.44,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Depende de la calle. Por la avenida principal me siento tranquila.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0009",
+      "inicio": 24.04,
+      "fin": 25.23,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Y por las calles de atrás?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0010",
+      "inicio": 25.82,
+      "fin": 29.23,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Ahí no tanto. Hay poca luz y casi nadie pasa después de las ocho.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0011",
+      "inicio": 29.83,
+      "fin": 31.31,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Ha cambiado eso con los años?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0012",
+      "inicio": 31.91,
+      "fin": 32.4,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Sí, claro.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [
+        "repeticion"
+      ],
+      "metricas": null
+    },
+    {
+      "id": "s0013",
+      "inicio": 34.2,
+      "fin": 34.67,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Sí, claro.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [
+        "repeticion"
+      ],
+      "metricas": null
+    },
+    {
+      "id": "s0014",
+      "inicio": 35.27,
+      "fin": 36.36,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Qué cambió exactamente?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0015",
+      "inicio": 36.96,
+      "fin": 39.75,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Cerraron la pulpería de la esquina y la parada quedó sola.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0016",
+      "inicio": 40.35,
+      "fin": 42.26,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Qué hace usted para sentirse más segura?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0017",
+      "inicio": 42.86,
+      "fin": 45.41,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Camino con el teléfono en la mano y aviso cuando salgo.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0018",
+      "inicio": 46.01,
+      "fin": 46.78,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿A quién le avisa?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0019",
+      "inicio": 47.38,
+      "fin": 49.52,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "A mi vecina. Nos escribimos por mensaje.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0020",
+      "inicio": 50.12,
+      "fin": 51.77,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Hay algún lugar que evite por completo?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0021",
+      "inicio": 52.37,
+      "fin": 54.38,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "El puente del río. De noche no paso por ahí.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0022",
+      "inicio": 54.98,
+      "fin": 56.53,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "¿Qué cambiaría primero si pudiera?",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0023",
+      "inicio": 57.13,
+      "fin": 59.36,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "Más luz en las aceras y que la parada tenga techo.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0024",
+      "inicio": 59.96,
+      "fin": 62.0,
+      "hablante": "entrevistadora",
+      "hablante_origen": "0",
+      "texto": "Muchas gracias por su tiempo, doña Ana.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    },
+    {
+      "id": "s0025",
+      "inicio": 62.6,
+      "fin": 63.66,
+      "hablante": "entrevistada",
+      "hablante_origen": "1",
+      "texto": "A usted, que le vaya bien.",
+      "estado": "sin_revisar",
+      "revisado_en": null,
+      "sospecha": [],
+      "metricas": null
+    }
+  ]
+}

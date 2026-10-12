@@ -1,0 +1,155 @@
+{
+ "duracion_s": 64.259,
+ "intervenciones": [
+  {
+   "hablante": 0,
+   "inicio": 0.5,
+   "fin": 2.482,
+   "texto": "Buenas tardes, gracias por recibirme."
+  },
+  {
+   "hablante": 1,
+   "inicio": 3.082,
+   "fin": 4.364,
+   "texto": "Con gusto, pase adelante."
+  },
+  {
+   "hablante": 0,
+   "inicio": 4.964,
+   "fin": 8.347,
+   "texto": "Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 8.947,
+   "fin": 11.016,
+   "texto": "Sí, Ana Inventada Muñoz, para servirle."
+  },
+  {
+   "hablante": 0,
+   "inicio": 11.616,
+   "fin": 13.565,
+   "texto": "¿Cuánto tiempo tiene de vivir en este barrio?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 14.165,
+   "fin": 16.908,
+   "texto": "Ya van a ser doce años. Llegué cuando nació mi hija."
+  },
+  {
+   "hablante": 0,
+   "inicio": 17.508,
+   "fin": 19.581,
+   "texto": "¿Cómo se siente al caminar por aquí en la noche?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 20.181,
+   "fin": 23.436,
+   "texto": "Depende de la calle. Por la avenida principal me siento tranquila."
+  },
+  {
+   "hablante": 0,
+   "inicio": 24.036,
+   "fin": 25.225,
+   "texto": "¿Y por las calles de atrás?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 25.825,
+   "fin": 29.23,
+   "texto": "Ahí no tanto. Hay poca luz y casi nadie pasa después de las ocho."
+  },
+  {
+   "hablante": 0,
+   "inicio": 29.83,
+   "fin": 31.312,
+   "texto": "¿Ha cambiado eso con los años?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 31.912,
+   "fin": 32.396,
+   "texto": "Sí, claro."
+  },
+  {
+   "hablante": 1,
+   "inicio": 34.196,
+   "fin": 34.671,
+   "texto": "Sí, claro."
+  },
+  {
+   "hablante": 0,
+   "inicio": 35.271,
+   "fin": 36.357,
+   "texto": "¿Qué cambió exactamente?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 36.957,
+   "fin": 39.747,
+   "texto": "Cerraron la pulpería de la esquina y la parada quedó sola."
+  },
+  {
+   "hablante": 0,
+   "inicio": 40.347,
+   "fin": 42.264,
+   "texto": "¿Qué hace usted para sentirse más segura?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 42.864,
+   "fin": 45.406,
+   "texto": "Camino con el teléfono en la mano y aviso cuando salgo."
+  },
+  {
+   "hablante": 0,
+   "inicio": 46.006,
+   "fin": 46.785,
+   "texto": "¿A quién le avisa?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 47.385,
+   "fin": 49.518,
+   "texto": "A mi vecina. Nos escribimos por mensaje."
+  },
+  {
+   "hablante": 0,
+   "inicio": 50.118,
+   "fin": 51.77,
+   "texto": "¿Hay algún lugar que evite por completo?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 52.37,
+   "fin": 54.381,
+   "texto": "El puente del río. De noche no paso por ahí."
+  },
+  {
+   "hablante": 0,
+   "inicio": 54.981,
+   "fin": 56.529,
+   "texto": "¿Qué cambiaría primero si pudiera?"
+  },
+  {
+   "hablante": 1,
+   "inicio": 57.129,
+   "fin": 59.361,
+   "texto": "Más luz en las aceras y que la parada tenga techo."
+  },
+  {
+   "hablante": 0,
+   "inicio": 59.961,
+   "fin": 62.004,
+   "texto": "Muchas gracias por su tiempo, doña Ana."
+  },
+  {
+   "hablante": 1,
+   "inicio": 62.604,
+   "fin": 63.659,
+   "texto": "A usted, que le vaya bien."
+  }
+ ]
+}

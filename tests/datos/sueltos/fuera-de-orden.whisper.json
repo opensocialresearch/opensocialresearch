@@ -1,0 +1,155 @@
+[
+ {
+  "start": 0.5,
+  "end": 2.48,
+  "text": "Buenas tardes, gracias por recibirme.",
+  "words": [
+   {
+    "s": 0.5,
+    "e": 0.86,
+    "w": " Buenas"
+   },
+   {
+    "s": 0.86,
+    "e": 1.28,
+    "w": " tardes,"
+   },
+   {
+    "s": 1.28,
+    "e": 1.7,
+    "w": " gracias"
+   },
+   {
+    "s": 1.7,
+    "e": 1.88,
+    "w": " por"
+   },
+   {
+    "s": 1.88,
+    "e": 2.48,
+    "w": " recibirme."
+   }
+  ]
+ },
+ {
+  "start": 4.96,
+  "end": 8.35,
+  "text": "Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?",
+  "words": [
+   {
+    "s": 4.96,
+    "e": 5.23,
+    "w": " Para"
+   },
+   {
+    "s": 5.23,
+    "e": 5.76,
+    "w": " empezar,"
+   },
+   {
+    "s": 5.76,
+    "e": 5.96,
+    "w": " ¿me"
+   },
+   {
+    "s": 5.96,
+    "e": 6.49,
+    "w": " confirma"
+   },
+   {
+    "s": 6.49,
+    "e": 6.69,
+    "w": " que"
+   },
+   {
+    "s": 6.69,
+    "e": 7.02,
+    "w": " usted"
+   },
+   {
+    "s": 7.02,
+    "e": 7.15,
+    "w": " es"
+   },
+   {
+    "s": 7.15,
+    "e": 7.35,
+    "w": " Ana"
+   },
+   {
+    "s": 7.35,
+    "e": 7.95,
+    "w": " Inventada"
+   },
+   {
+    "s": 7.95,
+    "e": 8.35,
+    "w": " Muñoz?"
+   }
+  ]
+ },
+ {
+  "start": 3.08,
+  "end": 4.36,
+  "text": "Con gusto, pase adelante.",
+  "words": [
+   {
+    "s": 3.08,
+    "e": 3.26,
+    "w": " Con"
+   },
+   {
+    "s": 3.26,
+    "e": 3.61,
+    "w": " gusto,"
+   },
+   {
+    "s": 3.61,
+    "e": 3.84,
+    "w": " pase"
+   },
+   {
+    "s": 3.84,
+    "e": 4.36,
+    "w": " adelante."
+   }
+  ]
+ },
+ {
+  "start": 8.95,
+  "end": 11.02,
+  "text": "Sí, Ana Inventada Muñoz, para servirle.",
+  "words": [
+   {
+    "s": 8.95,
+    "e": 9.13,
+    "w": " Sí,"
+   },
+   {
+    "s": 9.13,
+    "e": 9.31,
+    "w": " Ana"
+   },
+   {
+    "s": 9.31,
+    "e": 9.86,
+    "w": " Inventada"
+   },
+   {
+    "s": 9.86,
+    "e": 10.22,
+    "w": " Muñoz,"
+   },
+   {
+    "s": 10.22,
+    "e": 10.47,
+    "w": " para"
+   },
+   {
+    "s": 10.47,
+    "e": 11.02,
+    "w": " servirle."
+   }
+  ]
+ }
+]

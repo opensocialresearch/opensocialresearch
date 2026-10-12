@@ -1,0 +1,15 @@
+# Guion inventado de E02. Columnas: hablante, pausa antes en segundos, texto.
+# Los números salen en otro orden, como en la diarización real: 1 es quien
+# entrevista (voz M1) y 0 el participante (voz M3).
+1	0.5	Buenas noches, ¿tiene un minuto para conversar?
+0	0.6	Sí, un ratito, voy para la parada.
+1	0.6	¿Me dice su nombre, por favor?
+0	0.6	Bruno Ficticio Ramírez.
+1	0.6	¿Toma el bus aquí todos los días?
+0	0.6	De lunes a viernes, a las seis y media.
+1	0.6	¿Cómo se siente esperando a esa hora?
+0	0.6	Incómodo. La parada está oscura y uno no ve quién viene.
+1	0.6	¿Ha tenido algún problema?
+0	0.6	A mí no, pero a un compañero le quitaron el teléfono el mes pasado.
+1	0.6	Gracias, don Bruno. Que tenga buen viaje.
+0	0.6	Gracias, igualmente.

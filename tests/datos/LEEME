@@ -1,0 +1,156 @@
+DATOS DE PRUEBA DE OPEN SOCIAL RESEARCH (PRY-17)
+
+Todo lo que hay en esta carpeta es inventado. Los guiones de las entrevistas,
+los nombres de personas, los correos, las notas, los lugares, las fechas, las
+fichas y las voces se crearon para las pruebas automáticas. Ningún archivo
+viene de una persona participante real ni de una entrevista real, y cualquier
+parecido con personas o lugares reales es casual.
+
+
+LICENCIA
+
+El audio (E01.ogg, E02.m4a y E01-sin-duracion.ogg, más sus copias dentro del
+proyecto de prueba) es voz sintética generada con Supertonic 3 a partir de los
+guiones inventados de fuentes/. El modelo se distribuye bajo la licencia
+OpenRAIL-M, cuya sección 6 dice que el licenciante no reclama derechos sobre
+la salida que se genera con el modelo.
+
+El audio y todos los demás datos de esta carpeta se publican bajo CC0 1.0
+Universal (dedicación al dominio público),
+https://creativecommons.org/publicdomain/zero/1.0/deed.es
+
+
+CÓMO SE REGENERAN
+
+1. fuentes/sintetizar.py sintetiza el audio desde fuentes/guion-E01.tsv y
+   fuentes/guion-E02.tsv (Supertonic 3, voces M1 para quien entrevista, F2 para
+   E01 y M3 para E02, en español) y escribe sueltos/E01.ogg, sueltos/E02.m4a,
+   sueltos/tiempos-E01.json y sueltos/tiempos-E02.json con el inicio y el fin
+   exactos de cada intervención. Tarda y necesita el modelo, así que solo se
+   corre si cambian los guiones.
+2. fuentes/generar.py (Python 3, solo biblioteca estándar, más ffmpeg para los
+   JPEG) lee los tiempos y escribe todo lo demás de sueltos/ y el proyecto de
+   prueba de proyecto/, y al final comprueba alineaciones, formatos y que
+   nada identificable salga de identificable/. Es determinista: dos corridas
+   con la misma versión de ffmpeg dan los mismos bytes (se generó con ffmpeg
+   n9.0.1). No hace falta transcribir ni diarizar, porque los tiempos salen
+   exactos de la síntesis frase por frase.
+3. fuentes/generar.py --comprobar-base <carpeta> compara la base del proyecto
+   (proyecto.toml, README.md, bitácora, encabezados de los CSV) con un
+   proyecto recién creado con
+   osr nuevo <carpeta> --nombre "Proyecto de prueba inventado" --sin-navegador
+   salvo la fecha, para notar si cambiaron las plantillas de la app.
+
+
+NOMBRES INVENTADOS
+
+Primer conjunto. Están en la tabla de correspondencia y también dichos dentro
+de las transcripciones y de los encabezados, para las pruebas de PAR-04.
+- Ana Inventada Muñoz, E01.
+- Bruno Ficticio Ramírez, E02.
+- Carmen Inventada Solís, que no está en ningún archivo; solo la agregan las
+  pruebas de PRY-11.1 y PAR-05.1 como E03.
+
+Segundo conjunto. Solo aparecen en nombres originales de archivos importados,
+para las pruebas de PRY-07 y TRA-10.
+- Nombre Inventado.
+- Carla Supuesta Vega.
+
+
+ARCHIVOS SUELTOS (sueltos/)
+
+Entradas que las pruebas importan o copian. Ninguno vive dentro de un proyecto.
+
+Audio
+- E01.ogg: entrevista E01, Ogg Opus, 64,26 s, 25 intervenciones. La
+  intervención 3 dice el nombre de la participante, y la participante dice
+  dos veces seguidas «Sí, claro.» con 1,8 s entre una y otra.
+- E02.m4a: entrevista E02, AAC en m4a, 28,73 s, 12 intervenciones.
+- E01-sin-duracion.ogg: el audio de E01 con la posición de gránulo de todas
+  las páginas de audio en 0 y los CRC recalculados, así que el contenedor no
+  declara su duración (ffprobe da N/A) pero se decodifica entero. TRA-03.2,
+  TRA-07.3 y TRA-15.3.
+- tiempos-E01.json, tiempos-E02.json: inicio y fin de cada intervención, que
+  escribe sintetizar.py y lee generar.py.
+
+Cadena del autor, con el formato exacto de transcribir.py, hablantes.py y
+markdown.py (TRA-04, TRA-07, TRA-08, TRA-10)
+- E01.whisper.json, E02.whisper.json: un segmento por intervención, con los
+  tiempos de palabra repartidos en proporción al largo y redondeados a 2
+  decimales.
+- E01.hablantes.json, E02.hablantes.json: turnos y frases armadas con el mismo
+  algoritmo de hablantes.py. En E01 el hablante 0 es quien entrevista y el 1
+  la participante; en E02 es al revés, como sale a veces de la diarización.
+- E01.md, E02.md: Markdown de markdown.py con los mapas "0=Entrevistador,1=E01"
+  y "1=Entrevistador,0=E02".
+- E01.encabezado.md, E02.encabezado.md: fichas libres con fecha, lugar y
+  nombre, sin ninguna línea de intervención.
+
+Otras versiones de las mismas entrevistas
+- E01.vtt, E02.vtt: WebVTT como lo escribe la CLI de Whisper, sin voces ni
+  identificadores de bloque (TRA-09.2, TRA-12).
+- E01.openai.json, E02.openai.json: JSON de la CLI de Whisper de OpenAI con
+  avg_logprob, no_speech_prob y compression_ratio por debajo de los umbrales.
+  En E01, la serie «Sí, claro.» se marca como repetición.
+- E01-largo.vtt: E01.vtt con el último fin en la duración de E01 más 5 s
+  (1:09.259). TRA-05.4.
+- sospechas.openai.json: 12 segmentos para TRA-14. 1 sin_voz (0,7 y -1,2),
+  2 no (0,7 y -0,5), 3 no (2,4), 4 compresion (2,41), 5 a 7 repeticion
+  («Sí, claro.», «sí claro», «Sí, claro»), 8 compresion con el umbral por
+  defecto y no con 3.0 (2,5), y 9 a 12 sin marcas.
+- sin-compresion.openai.json: E01 con avg_logprob y no_speech_prob y sin
+  compression_ratio. TRA-06.3.
+- tres-hablantes.hablantes.json: seis frases de los hablantes 0, 1 y 2.
+  TRA-08.2.
+
+Inválidos de TRA-04 y TRA-05 (Ejemplos de TRA-05.1)
+- desconocido.json: JSON válido que no es de ningún tipo.
+- latin1.vtt: WebVTT con texto en Latin-1, que no es UTF-8.
+- roto.json: JSON roto en la línea 3, columna 15. La columna se cuenta desde 1
+  y en caracteres, como serde_json (y como Python); el archivo es ASCII, así
+  que en bytes da lo mismo. Ahí falta una coma antes de "text".
+- copia.whisper.json: copia exacta de E01.whisper.json, para tener dos de tipo
+  cadena_whisper.
+- campo-faltante.hablantes.json: las cuatro primeras frases de E01, la 2 sin
+  end.
+- tiempos-invalidos.whisper.json: segmentos 1 a 3 válidos, el 4 de 12,5 a
+  11,25 y el 5 válido.
+- fuera-de-orden.whisper.json: el segmento 3 empieza antes que el 2.
+- vacio.whisper.json: [].
+- marca-mala.vtt: la marca de la línea 5 es 00:00.5, sin los tres dígitos.
+- muchos.whisper.json: 20.001 segmentos dentro de los primeros 60 s de E01,
+  compactos y con words vacía (1 MB, unos 100 KB comprimido).
+- grande.whisper.json, de más de 50 MB, no está aquí. Lo crea la prueba como
+  archivo disperso.
+
+Imágenes y otros
+- firma hoja 1.jpg, firma hoja 2.jpg: JPEG chicos de una hoja de formulario
+  inventada con una firma, distintos entre sí. PAR-08.1.
+- formulario.pdf: imagen PNG con extensión .pdf. PAR-08.2.
+- apuntes sueltos.txt, foto de campo.jpg: archivos que las pruebas copian a
+  identificable/ sin registrarlos. PRY-11.5.
+
+
+PROYECTO DE PRUEBA (proyecto/)
+
+Lo que deja la app después de crear el proyecto con osr nuevo, registrar a E01
+y E02 con su correspondencia y su consentimiento (grabar otorgado, sin
+respaldo, y entre los demás alcances al menos un denegado y un no_consultado;
+la versión del formulario de E02 es "v1, octubre", entre comillas en la línea
+3 de consentimientos.csv), crear sus entrevistas, importar su audio e importar
+los cuatro archivos de su cadena con el modelo large-v3-turbo. Las dos
+transcripciones están sin revisar y sin cambios, con la serie repetida de E01
+marcada. No trae .osr/, que la app reconstruye al abrir.
+
+
+CÓMO SE USA EL PROYECTO DE PRUEBA
+
+Git no guarda permisos ni carpetas vacías, y un .gitkeep sería un archivo no
+registrado en la zona identificable que rompería PRY-11.5 y PRY-11.6. Por eso
+el paso de las pruebas que hace «una copia del proyecto de prueba» copia
+proyecto/ a la carpeta temporal y después
+- crea las carpetas vacías de la columna «Al crear» de PRY-02 que falten, hoy
+  identificable/consentimientos/, y
+- fija los permisos de SRV-13: 0700 en todas las carpetas, 0600 en los
+  archivos gestionados modificables, y 0400 en los audios y en todo lo que hay
+  bajo origen/.

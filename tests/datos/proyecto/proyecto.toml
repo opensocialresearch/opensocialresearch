@@ -1,0 +1,24 @@
+formato = "osr-proyecto"
+version_formato = 1
+nombre = "Proyecto de prueba inventado"
+creado = 2026-10-05T09:00:00-06:00
+
+[[consentimiento.alcances]]
+id = "grabar"
+etiqueta = "Grabar la entrevista"
+
+[[consentimiento.alcances]]
+id = "citar_textualmente"
+etiqueta = "Citar textualmente sus palabras"
+
+[[consentimiento.alcances]]
+id = "usar_puntos_mapa"
+etiqueta = "Usar sus puntos del mapa"
+
+[[consentimiento.alcances]]
+id = "archivar"
+etiqueta = "Archivar los datos al terminar"
+
+[[consentimiento.alcances]]
+id = "reutilizar"
+etiqueta = "Reutilizar los datos en otras investigaciones"

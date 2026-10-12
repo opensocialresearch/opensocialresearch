@@ -1,0 +1,50 @@
+formato = "osr-importacion"
+version_formato = 1
+marca = "20261006T101500"
+fuente = "cadena_hablantes"
+modelo = "large-v3-turbo"
+markdown_alineado = "si"
+excepciones = []
+
+[[archivos]]
+tipo = "cadena_whisper"
+archivo = "E01.whisper.json"
+nombre_original = "Carla Supuesta Vega.whisper.json"
+sha256 = "87c28f416151dcb4f5f54e6cec20d16c74e472f56a3bf50acb594b16054296e9"
+bytes = 13870
+
+[[archivos]]
+tipo = "cadena_hablantes"
+archivo = "E01.hablantes.json"
+nombre_original = "Carla Supuesta Vega.hablantes.json"
+sha256 = "c8099ba4389b34f5fdb03b4ab551bfbe11a17ead3b08531fd2e5511c3d407b47"
+bytes = 3707
+
+[[archivos]]
+tipo = "cadena_markdown"
+archivo = "E01.md"
+nombre_original = "Carla Supuesta Vega.md"
+sha256 = "d1fb62bab99ed10b3b517051881950b5165eee7bf268b3a3e211adff2882e90d"
+bytes = 1918
+
+[[archivos]]
+tipo = "encabezado"
+archivo = "E01.encabezado.md"
+nombre_original = "Carla Supuesta Vega.encabezado.md"
+sha256 = "33dfe5ce519dd54ffc3569919d3c82134071329bb2761bfea8b50763905e19d1"
+bytes = 300
+
+[[hablantes]]
+origen = "0"
+rol = "entrevistadora"
+
+[[hablantes]]
+origen = "1"
+rol = "entrevistada"
+
+[reglas_sospecha]
+aplicadas = ["repeticion"]
+omitidas = ["sin_voz", "compresion"]
+no_speech_prob = 0.6
+avg_logprob = -1.0
+compression_ratio = 2.4

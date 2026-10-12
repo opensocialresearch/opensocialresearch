@@ -1,0 +1,27 @@
+# Guion inventado de E01. Columnas: hablante, pausa antes en segundos, texto.
+# Hablante 0 es quien entrevista (voz M1) y 1 la participante (voz F2).
+0	0.5	Buenas tardes, gracias por recibirme.
+1	0.6	Con gusto, pase adelante.
+0	0.6	Para empezar, ¿me confirma que usted es Ana Inventada Muñoz?
+1	0.6	Sí, Ana Inventada Muñoz, para servirle.
+0	0.6	¿Cuánto tiempo tiene de vivir en este barrio?
+1	0.6	Ya van a ser doce años. Llegué cuando nació mi hija.
+0	0.6	¿Cómo se siente al caminar por aquí en la noche?
+1	0.6	Depende de la calle. Por la avenida principal me siento tranquila.
+0	0.6	¿Y por las calles de atrás?
+1	0.6	Ahí no tanto. Hay poca luz y casi nadie pasa después de las ocho.
+0	0.6	¿Ha cambiado eso con los años?
+1	0.6	Sí, claro.
+1	1.8	Sí, claro.
+0	0.6	¿Qué cambió exactamente?
+1	0.6	Cerraron la pulpería de la esquina y la parada quedó sola.
+0	0.6	¿Qué hace usted para sentirse más segura?
+1	0.6	Camino con el teléfono en la mano y aviso cuando salgo.
+0	0.6	¿A quién le avisa?
+1	0.6	A mi vecina. Nos escribimos por mensaje.
+0	0.6	¿Hay algún lugar que evite por completo?
+1	0.6	El puente del río. De noche no paso por ahí.
+0	0.6	¿Qué cambiaría primero si pudiera?
+1	0.6	Más luz en las aceras y que la parada tenga techo.
+0	0.6	Muchas gracias por su tiempo, doña Ana.
+1	0.6	A usted, que le vaya bien.

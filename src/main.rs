@@ -7,6 +7,7 @@ mod navegador;
 mod nuevo;
 mod plantillas;
 mod registro;
+mod rutas;
 mod servidor;
 mod token;
 

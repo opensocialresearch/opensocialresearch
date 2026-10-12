@@ -6,6 +6,28 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-25.** Token en todas las rutas (SRV-05). El servidor arma sus rutas solo
+  desde la lista de `src/rutas.rs`, que no depende de nada del programa, y la
+  prueba incluye ese mismo archivo con `#[path]`, así la lista sale de la
+  propia definición del servidor sin ser una biblioteca aparte y sin cambiar
+  las barandas. Hoy la lista tiene solo `GET /`. La capa del token envuelve
+  también la ruta de reserva, así un camino inexistente da 401 sin token y 404
+  con token. El token vale por `Authorization: Bearer` y por la entrada
+  `GET /?token=`, y la cookie de sesión llega con SRV-04. La familia de un
+  camino se decide por el prefijo `/api/`, con barra final, y `/api` sin barra
+  cae en las demás. Como no existen los datos de PRY-17 ni `osr abrir`, «una
+  copia del proyecto de prueba» y «osr está corriendo con el proyecto abierto»
+  crean por ahora un proyecto vacío con `osr nuevo`, que queda abierto igual.
+  PRY-04 y PRY-17 los reemplazan por la copia de los datos de prueba y su
+  apertura. La ruta que crea un participante no existe hasta PAR, el paso usa
+  el camino `/api/participantes`, y sin token da 401 exista o no. Al definir
+  esos dos pasos compartidos, muchos escenarios de requisitos pendientes
+  empezaron a correr y a fallar, así que, siguiendo D-20, los pasos de pedidos
+  capturan solo lo que ya existe, los estados 200, 401 y 404, los caminos `/`,
+  `/?token=` y `/no-existe`, los encabezados Authorization y Cookie y el Origin
+  propio, y las huellas de carpetas bajo `{tmp}`. Quien implemente SRV-06,
+  SRV-07, SRV-11 o PRY-17 amplía esas capturas.
+
 - **D-24.** Token por arranque (SRV-03). El token llegó con SRV-01, porque la
   línea de arranque ya lo lleva, y se genera con 256 bits de `/dev/urandom` en
   base64url hecho a mano y probado con los vectores del RFC 4648, sin crates

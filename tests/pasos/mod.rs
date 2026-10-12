@@ -66,6 +66,12 @@ pub struct Mundo {
     /// El pedido HTTP que arma el escenario y la respuesta que recibió.
     pedido: Option<http::Pedido>,
     respuesta: Option<http::Respuesta>,
+    /// Método y camino de cada ruta que declara el servidor, y la respuesta
+    /// de cada camino al pedido que les mandó el escenario.
+    lista_de_rutas: Vec<(String, String)>,
+    respuestas: Vec<(String, http::Respuesta)>,
+    /// Las familias de rutas que el escenario ya revisó por su nombre.
+    familias_vistas: Vec<String>,
 }
 
 impl Mundo {
@@ -92,6 +98,9 @@ impl Mundo {
             sin_navegador: false,
             pedido: None,
             respuesta: None,
+            lista_de_rutas: Vec::new(),
+            respuestas: Vec::new(),
+            familias_vistas: Vec::new(),
         }
     }
 

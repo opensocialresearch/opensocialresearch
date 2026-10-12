@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
 
+use super::http::{Pedido, Respuesta};
 use super::orden::direccion_de;
 use super::{DORMIR, Mundo, sostener};
 
@@ -297,5 +298,117 @@ fn ninguna_linea_con_el_token(mundo: &mut Mundo) {
     assert!(
         !leidas.iter().any(|l| l.contains(&token)),
         "el token apareció en una línea de órdenes"
+    );
+}
+
+/// La definición de rutas del propio servidor, incluida tal cual (SRV-10).
+#[path = "../../src/rutas.rs"]
+mod rutas_del_servidor;
+
+/// Un camino concreto para un patrón de axum, con un valor de prueba en cada
+/// segmento variable como `{entrevista}`.
+fn camino_concreto(patron: &str) -> String {
+    patron
+        .split('/')
+        .map(|parte| if parte.starts_with('{') { "E01" } else { parte })
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+#[given("la lista completa de rutas que el servidor declara en su propia definición de rutas")]
+fn lista_de_rutas(mundo: &mut Mundo) {
+    mundo.lista_de_rutas = rutas_del_servidor::RUTAS
+        .iter()
+        .flat_map(|ruta| {
+            ruta.metodos
+                .iter()
+                .map(|m| (m.to_string(), camino_concreto(ruta.camino)))
+        })
+        .collect();
+    assert!(!mundo.lista_de_rutas.is_empty());
+}
+
+#[when(
+    regex = r#"^se manda a cada ruta de la lista, con cada método que acepta, un pedido con Host propio, con "([^"]+)" con valor "([^"]+)" si el método no es GET ni HEAD, y sin cookie ni token$"#
+)]
+async fn a_cada_ruta(mundo: &mut Mundo, nombre: String, valor: String) {
+    let valor = mundo.resolver(&valor);
+    mundo.respuestas.clear();
+    for (metodo, camino) in mundo.lista_de_rutas.clone() {
+        let mut pedido = Pedido::nuevo(&metodo, mundo.direccion(&camino));
+        if !["GET", "HEAD"].contains(&metodo.as_str()) {
+            pedido = pedido.con_encabezado(&nombre, &valor);
+        }
+        let respuesta = pedido.mandar().await;
+        mundo.respuestas.push((camino, respuesta));
+    }
+}
+
+#[then(expr = "cada respuesta tiene estado {int}")]
+fn cada_estado(mundo: &mut Mundo, estado: u16) {
+    for (camino, respuesta) in &mundo.respuestas {
+        assert_eq!(respuesta.estado, estado, "{camino}");
+    }
+}
+
+#[then("cada respuesta tiene estos encabezados")]
+fn cada_encabezado(mundo: &mut Mundo, step: &Step) {
+    let tabla = step.table.as_ref().expect("falta la tabla de encabezados");
+    for (camino, respuesta) in &mundo.respuestas {
+        for fila in &tabla.rows[1..] {
+            assert_eq!(
+                respuesta.encabezado(&fila[0]),
+                Some(fila[1].as_str()),
+                "{camino}"
+            );
+        }
+    }
+}
+
+#[then(expr = "el cuerpo de cada respuesta de la familia {string} es el JSON")]
+fn cuerpo_json_de_la_familia(mundo: &mut Mundo, familia: String, step: &Step) {
+    let esperado: serde_json::Value =
+        serde_json::from_str(step.docstring.as_ref().expect("falta el JSON")).unwrap();
+    for (camino, respuesta) in mundo
+        .respuestas
+        .iter()
+        .filter(|(c, _)| c.starts_with(&familia))
+    {
+        let cuerpo: serde_json::Value = serde_json::from_str(&respuesta.cuerpo)
+            .unwrap_or_else(|e| panic!("{camino}: el cuerpo no es JSON ({e})"));
+        assert_eq!(cuerpo, esperado, "{camino}");
+    }
+    mundo.familias_vistas.push(familia);
+}
+
+#[then(
+    expr = "el cuerpo de cada respuesta de las demás familias es una página HTML que contiene {string}"
+)]
+fn cuerpo_html_de_las_demas(mundo: &mut Mundo, texto: String) {
+    let demas = mundo
+        .respuestas
+        .iter()
+        .filter(|(c, _)| !mundo.familias_vistas.iter().any(|f| c.starts_with(f)));
+    for (camino, respuesta) in demas {
+        es_pagina_con(respuesta, &texto, camino);
+    }
+}
+
+#[then(expr = "el cuerpo de la respuesta es una página HTML que contiene {string}")]
+fn cuerpo_html(mundo: &mut Mundo, texto: String) {
+    let respuesta = mundo
+        .respuesta
+        .as_ref()
+        .expect("falta «se manda el pedido»");
+    es_pagina_con(respuesta, &texto, "");
+}
+
+fn es_pagina_con(respuesta: &Respuesta, texto: &str, camino: &str) {
+    let tipo = respuesta.encabezado("content-type").unwrap_or("");
+    assert!(tipo.starts_with("text/html"), "{camino}: {tipo}");
+    assert!(
+        respuesta.cuerpo.contains(texto),
+        "{camino}: {}",
+        respuesta.cuerpo
     );
 }

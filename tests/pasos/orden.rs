@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use cucumber::{then, when};
+use cucumber::{given, then, when};
 
 use super::{Mundo, esperar, sigterm};
 
@@ -179,6 +179,15 @@ fn se_cierra(mundo: &mut Mundo) {
     let codigo = terminar(osr);
     assert_eq!(codigo, Some(0), "osr no terminó con código 0 en 3 s");
     mundo.codigo = codigo;
+}
+
+/// Hasta que existan PRY-04 y los datos de PRY-17, el proyecto se abre
+/// creándolo con `osr nuevo`, que lo deja abierto igual (D-25).
+#[given("osr está corriendo con el proyecto abierto")]
+fn corre_con_el_proyecto(mundo: &mut Mundo) {
+    let proyecto = mundo.proyecto.to_string_lossy().into_owned();
+    mundo.lanzar(&format!("osr nuevo \"{proyecto}\" --sin-navegador"));
+    esta_corriendo(mundo);
 }
 
 #[then("osr está corriendo con el proyecto abierto")]

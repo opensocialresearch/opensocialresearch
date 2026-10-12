@@ -13,21 +13,38 @@ pub struct Pedido {
     metodo: String,
     direccion: String,
     encabezados: Vec<(String, String)>,
+    cuerpo: Option<String>,
 }
 
-/// Lo que respondió el servidor.
+/// Lo que respondió el servidor, con los nombres de los encabezados en
+/// minúscula.
 #[derive(Debug)]
 pub struct Respuesta {
     pub estado: u16,
+    pub encabezados: Vec<(String, String)>,
+    pub cuerpo: String,
+}
+
+impl Respuesta {
+    /// El valor de un encabezado, sin distinguir mayúsculas en el nombre.
+    pub fn encabezado(&self, nombre: &str) -> Option<&str> {
+        let nombre = nombre.to_ascii_lowercase();
+        self.encabezados
+            .iter()
+            .find(|(n, _)| *n == nombre)
+            .map(|(_, v)| v.as_str())
+    }
 }
 
 impl Mundo {
     fn nuevo_pedido(&mut self, metodo: &str, direccion: String) {
-        self.pedido = Some(Pedido {
-            metodo: metodo.to_string(),
-            direccion,
-            encabezados: Vec::new(),
-        });
+        self.pedido = Some(Pedido::nuevo(metodo, direccion));
+    }
+
+    /// La dirección de un camino en el servidor del escenario.
+    pub(super) fn direccion(&self, camino: &str) -> String {
+        let puerto = self.puerto.expect("osr no escribió su puerto");
+        format!("http://127.0.0.1:{puerto}{}", self.resolver(camino))
     }
 
     fn encabezado(&mut self, nombre: &str, valor: String) {
@@ -40,10 +57,12 @@ impl Mundo {
     }
 }
 
-#[given(expr = "un pedido HTTP {word} a {string}")]
+// Solo los caminos de las familias que ya existen, la entrada y una ruta
+// inexistente. Los de `/audio/` y `/respaldo/` quedan sin definir hasta SRV-11
+// y PAR-08 (D-20).
+#[given(regex = r#"^un pedido HTTP ([A-Z]+) a "(/|/\?token=[^"]*|/no-existe)"$"#)]
 fn pedido_a(mundo: &mut Mundo, metodo: String, camino: String) {
-    let puerto = mundo.puerto.expect("osr no escribió su puerto");
-    let direccion = format!("http://127.0.0.1:{puerto}{}", mundo.resolver(&camino));
+    let direccion = mundo.direccion(&camino);
     mundo.nuevo_pedido(&metodo, direccion);
 }
 
@@ -67,21 +86,46 @@ fn con_token(mundo: &mut Mundo) {
 }
 
 impl Pedido {
-    async fn mandar(&self) -> Respuesta {
+    pub fn nuevo(metodo: &str, direccion: String) -> Pedido {
+        Pedido {
+            metodo: metodo.to_string(),
+            direccion,
+            encabezados: Vec::new(),
+            cuerpo: None,
+        }
+    }
+
+    pub fn con_encabezado(mut self, nombre: &str, valor: &str) -> Pedido {
+        self.encabezados
+            .push((nombre.to_string(), valor.to_string()));
+        self
+    }
+
+    pub async fn mandar(&self) -> Respuesta {
         let cliente = reqwest::Client::builder().no_proxy().build().unwrap();
         let metodo = reqwest::Method::from_bytes(self.metodo.as_bytes()).expect("método HTTP");
         let mut armado = cliente.request(metodo, &self.direccion);
         for (nombre, valor) in &self.encabezados {
             armado = armado.header(nombre, valor);
         }
+        if let Some(cuerpo) = &self.cuerpo {
+            armado = armado.body(cuerpo.clone());
+        }
         let respuesta = armado.send().await.expect("mandar el pedido");
+        let encabezados = respuesta
+            .headers()
+            .iter()
+            .map(|(n, v)| (n.as_str().to_string(), v.to_str().unwrap_or("").to_string()))
+            .collect();
         Respuesta {
             estado: respuesta.status().as_u16(),
+            encabezados,
+            cuerpo: respuesta.text().await.expect("leer el cuerpo"),
         }
     }
 
     /// Manda el pedido con curl desde la red de prueba, donde corre `osr`.
-    /// Solo trae el estado, que es lo que miran esos escenarios.
+    /// Solo trae el estado, que es lo único que miran esos escenarios.
     fn mandar_con_curl(&self, mut nsenter: std::process::Command) -> Respuesta {
         nsenter.arg(super::programa("curl"));
         nsenter.args([
@@ -102,14 +146,43 @@ impl Pedido {
             estado: estado
                 .parse()
                 .unwrap_or_else(|_| panic!("curl respondió {estado:?}")),
+            encabezados: Vec::new(),
+            cuerpo: String::new(),
         }
     }
 }
 
-#[given(expr = "el pedido lleva el encabezado {string} con valor {string}")]
+// Solo los encabezados que el servidor ya mira, el token y la cookie, más el
+// Origin propio. Host, Range, Sec-Fetch-Site y los Origin ajenos quedan sin
+// definir hasta SRV-06, SRV-07 y SRV-11 (D-20).
+#[given(regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie)" con valor "([^"]*)"$"#)]
 fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
     let valor = mundo.resolver(&valor);
     mundo.encabezado(&nombre, valor);
+}
+
+#[given(
+    regex = r#"^el pedido lleva el encabezado "Origin" con valor "(http://127\.0\.0\.1:\{P\})"$"#
+)]
+fn con_origen_propio(mundo: &mut Mundo, valor: String) {
+    let valor = mundo.resolver(&valor);
+    mundo.encabezado("Origin", valor);
+}
+
+#[given("el pedido no lleva token")]
+fn sin_token(_mundo: &mut Mundo) {}
+
+/// La ruta todavía no existe, llega con PAR. El camino es el que va a tener,
+/// y sin token tiene que dar 401 exista o no (SRV-05).
+#[given(
+    expr = "un pedido HTTP POST a la ruta de la API que crea un participante, con el cuerpo de un participante {string}"
+)]
+fn pedido_crea_participante(mundo: &mut Mundo, seudonimo: String) {
+    let direccion = mundo.direccion("/api/participantes");
+    let mut pedido =
+        Pedido::nuevo("POST", direccion).con_encabezado("Content-Type", "application/json");
+    pedido.cuerpo = Some(serde_json::json!({ "seudonimo": seudonimo }).to_string());
+    mundo.pedido = Some(pedido);
 }
 
 #[when("se manda el pedido")]
@@ -122,7 +195,9 @@ async fn se_manda(mundo: &mut Mundo) {
     mundo.respuesta = Some(respuesta);
 }
 
-#[then(expr = "la respuesta tiene estado {int}")]
+// Solo los estados que el servidor ya produce. Los 403, 206 y 416 llegan con
+// SRV-06, SRV-07 y SRV-11, y sus escenarios quedan omitidos (D-20).
+#[then(regex = r"^la respuesta tiene estado (200|401|404)$")]
 fn estado_es(mundo: &mut Mundo, estado: u16) {
     let respuesta = mundo
         .respuesta

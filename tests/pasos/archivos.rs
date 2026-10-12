@@ -17,6 +17,24 @@ fn esta_vacia(carpeta: &Path) -> bool {
         .is_none()
 }
 
+/// Los datos de prueba de PRY-17 todavía no existen, así que por ahora el
+/// proyecto de prueba es uno recién creado en `{proyecto}`, que crea el paso
+/// «osr está corriendo con el proyecto abierto» (D-25).
+#[given("una copia del proyecto de prueba")]
+fn copia_del_proyecto(mundo: &mut Mundo) {
+    assert!(!mundo.proyecto.exists());
+}
+
+#[given("se tomó la huella de cada archivo del proyecto")]
+fn huellas_del_proyecto(mundo: &mut Mundo) {
+    mundo.huellas = rutas(&mundo.proyecto);
+}
+
+#[then("ningún archivo del proyecto cambió respecto de las huellas tomadas")]
+fn proyecto_sin_cambios(mundo: &mut Mundo) {
+    assert_eq!(rutas(&mundo.proyecto), mundo.huellas);
+}
+
 #[given(expr = "una carpeta temporal vacía {string}")]
 fn carpeta_temporal(mundo: &mut Mundo, tmp: String) {
     assert!(esta_vacia(&mundo.ruta(&tmp)));
@@ -47,7 +65,9 @@ fn archivo_con_texto(mundo: &mut Mundo, archivo: String, texto: String) {
     fs::write(&archivo, texto).expect("escribir el archivo");
 }
 
-#[given(expr = "se tomó la huella de cada archivo de {string}")]
+// Solo carpetas bajo `{tmp}`. Las de los datos de prueba no existen hasta
+// PRY-17, y sus escenarios quedan omitidos (D-20).
+#[given(regex = r#"^se tomó la huella de cada archivo de "(\{tmp\}[^"]*)"$"#)]
 fn tomar_huellas(mundo: &mut Mundo, carpeta: String) {
     mundo.huellas = rutas(&mundo.ruta(&carpeta));
 }

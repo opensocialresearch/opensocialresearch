@@ -119,7 +119,7 @@ pub async fn correr(accion: Accion<'_>, sin_navegador: bool) -> ExitCode {
         }
     };
     let token: Arc<str> = token::nuevo().expect("leer /dev/urandom").into();
-    let rutas = servidor::rutas(token.clone());
+    let rutas = servidor::rutas(token.clone(), escucha.puerto);
     let (cerrando, aviso) = watch::channel(());
     let mut servidores = vec![atender(escucha.v4, rutas.clone(), aviso.clone())];
     servidores.extend(escucha.v6.map(|v6| atender(v6, rutas, aviso)));

@@ -6,6 +6,29 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-30.** Validación de Host (SRV-06). El servidor lee el encabezado
+  `Host` tal cual, sin mirar `X-Forwarded-Host` ni la autoridad del camino,
+  porque esos son justo los caminos del reenlace de DNS. Es propio si es
+  `127.0.0.1:P`, `[::1]:P` o `localhost:P` sin distinguir mayúsculas, y un
+  Host sin puerto, como `localhost`, es ajeno, porque los navegadores siempre
+  mandan el puerto cuando no es el 80. El 403 lleva el cuerpo JSON en todas
+  las familias, sin `WWW-Authenticate`, porque la especificación no da otro
+  cuerpo para las páginas. La validación corre en la misma capa que el token,
+  antes que él, y por eso el servidor recibe el puerto además del token. En
+  los pasos, «el pedido lleva el encabezado» captura también `Host`, «la
+  respuesta tiene estado» captura el 403 y se definen «el cuerpo de la
+  respuesta es el JSON» y «el pedido no lleva el encabezado "Host"», que
+  escribe el pedido a mano por TCP porque reqwest y curl siempre agregan
+  `Host`. Al capturar el 403 empezó a correr SRV-07.2, que tenía definidos
+  todos sus demás pasos, compartidos con SRV-05.3 y SRV-06, así que según
+  D-20 no había ninguna captura que acotar sin dejar fuera a SRV-06. El
+  commit de SRV-06 queda con ese único escenario en rojo en la corrida sin
+  etiquetas, la cobertura y la mutación no pueden correr hasta que pase, y
+  el commit de SRV-07, que lo pone en verde, es donde se corrieron las
+  barandas completas de los dos. Se descartó juntar los dos requisitos en un
+  commit y se descartó saltar el paso en ejecución, que sería debilitar el
+  escenario.
+
 - **D-29.** Archivo `proyecto.toml` (PRY-03). Al abrir, `osr` valida
   `proyecto.toml` antes de tomar el bloqueo, así un error no escribe nada en
   la carpeta. Las claves obligatorias se revisan en el orden de la tabla,

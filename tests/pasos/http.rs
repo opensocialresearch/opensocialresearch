@@ -14,6 +14,8 @@ pub struct Pedido {
     direccion: String,
     encabezados: Vec<(String, String)>,
     cuerpo: Option<String>,
+    /// Si el pedido va sin `Host`, que reqwest y curl siempre agregan (SRV-06.4).
+    sin_host: bool,
 }
 
 /// Lo que respondió el servidor, con los nombres de los encabezados en
@@ -92,6 +94,7 @@ impl Pedido {
             direccion,
             encabezados: Vec::new(),
             cuerpo: None,
+            sin_host: false,
         }
     }
 
@@ -102,6 +105,9 @@ impl Pedido {
     }
 
     pub async fn mandar(&self) -> Respuesta {
+        if self.sin_host {
+            return self.mandar_crudo();
+        }
         let cliente = reqwest::Client::builder().no_proxy().build().unwrap();
         let metodo = reqwest::Method::from_bytes(self.metodo.as_bytes()).expect("método HTTP");
         let mut armado = cliente.request(metodo, &self.direccion);
@@ -121,6 +127,44 @@ impl Pedido {
             estado: respuesta.status().as_u16(),
             encabezados,
             cuerpo: respuesta.text().await.expect("leer el cuerpo"),
+        }
+    }
+
+    /// Escribe el pedido a mano en HTTP/1.1, sin `Host`, y lee la respuesta
+    /// hasta que el servidor cierra la conexión.
+    fn mandar_crudo(&self) -> Respuesta {
+        use std::io::{Read, Write};
+        let resto = self
+            .direccion
+            .strip_prefix("http://")
+            .expect("dirección http");
+        let (autoridad, camino) = resto.split_at(resto.find('/').unwrap_or(resto.len()));
+        let mut texto = format!("{} {camino} HTTP/1.1\r\nConnection: close\r\n", self.metodo);
+        for (nombre, valor) in &self.encabezados {
+            texto.push_str(&format!("{nombre}: {valor}\r\n"));
+        }
+        let cuerpo = self.cuerpo.clone().unwrap_or_default();
+        texto.push_str(&format!("Content-Length: {}\r\n\r\n{cuerpo}", cuerpo.len()));
+        let mut conexion = std::net::TcpStream::connect(autoridad).expect("conectar con osr");
+        conexion
+            .write_all(texto.as_bytes())
+            .expect("escribir el pedido");
+        let mut leido = String::new();
+        conexion
+            .read_to_string(&mut leido)
+            .expect("leer la respuesta");
+        let (cabecera, cuerpo) = leido.split_once("\r\n\r\n").expect("respuesta HTTP");
+        let mut lineas = cabecera.lines();
+        let estado = lineas.next().and_then(|l| l.split(' ').nth(1));
+        Respuesta {
+            estado: estado
+                .and_then(|e| e.parse().ok())
+                .expect("línea de estado"),
+            encabezados: lineas
+                .filter_map(|l| l.split_once(": "))
+                .map(|(n, v)| (n.to_ascii_lowercase(), v.to_string()))
+                .collect(),
+            cuerpo: cuerpo.to_string(),
         }
     }
 
@@ -152,10 +196,12 @@ impl Pedido {
     }
 }
 
-// Solo los encabezados que el servidor ya mira, el token y la cookie, más el
-// Origin propio. Host, Range, Sec-Fetch-Site y los Origin ajenos quedan sin
-// definir hasta SRV-06, SRV-07 y SRV-11 (D-20).
-#[given(regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie)" con valor "([^"]*)"$"#)]
+// Solo los encabezados que el servidor ya mira, el token, la cookie y el Host,
+// más el Origin propio. Range, Sec-Fetch-Site y los Origin ajenos quedan sin
+// definir hasta SRV-07 y SRV-11 (D-20).
+#[given(
+    regex = r#"^el pedido lleva el encabezado "(Authorization|Cookie|Host)" con valor "([^"]*)"$"#
+)]
 fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
     let valor = mundo.resolver(&valor);
     mundo.encabezado(&nombre, valor);
@@ -167,6 +213,12 @@ fn con_encabezado(mundo: &mut Mundo, nombre: String, valor: String) {
 fn con_origen_propio(mundo: &mut Mundo, valor: String) {
     let valor = mundo.resolver(&valor);
     mundo.encabezado("Origin", valor);
+}
+
+#[given(r#"el pedido no lleva el encabezado "Host""#)]
+fn sin_host(mundo: &mut Mundo) {
+    let pedido = mundo.pedido.as_mut().expect("falta «un pedido HTTP»");
+    pedido.sin_host = true;
 }
 
 #[given("el pedido no lleva token")]
@@ -195,15 +247,28 @@ async fn se_manda(mundo: &mut Mundo) {
     mundo.respuesta = Some(respuesta);
 }
 
-// Solo los estados que el servidor ya produce. Los 403, 206 y 416 llegan con
-// SRV-06, SRV-07 y SRV-11, y sus escenarios quedan omitidos (D-20).
-#[then(regex = r"^la respuesta tiene estado (200|401|404)$")]
+// Solo los estados que el servidor ya produce. Los 206 y 416 llegan con
+// SRV-11, y sus escenarios quedan omitidos (D-20).
+#[then(regex = r"^la respuesta tiene estado (200|401|403|404)$")]
 fn estado_es(mundo: &mut Mundo, estado: u16) {
     let respuesta = mundo
         .respuesta
         .as_ref()
         .expect("falta «se manda el pedido»");
     assert_eq!(respuesta.estado, estado);
+}
+
+#[then("el cuerpo de la respuesta es el JSON")]
+fn cuerpo_json(mundo: &mut Mundo, step: &cucumber::gherkin::Step) {
+    let esperado: serde_json::Value =
+        serde_json::from_str(step.docstring.as_ref().expect("falta el JSON")).unwrap();
+    let respuesta = mundo
+        .respuesta
+        .as_ref()
+        .expect("falta «se manda el pedido»");
+    let cuerpo: serde_json::Value = serde_json::from_str(&respuesta.cuerpo)
+        .unwrap_or_else(|e| panic!("el cuerpo no es JSON ({e}): {}", respuesta.cuerpo));
+    assert_eq!(cuerpo, esperado);
 }
 
 /// Lo que muestra la app es, hasta la vista «Resumen del proyecto», la

@@ -1,4 +1,4 @@
-//! El servidor local: rutas y token (SRV-01, SRV-05).
+//! El servidor local: rutas, Host y token (SRV-01, SRV-05, SRV-06).
 
 use std::sync::Arc;
 
@@ -21,6 +21,34 @@ const NO_AUTORIZADO: &str = include_str!("no_autorizado.html");
 /// El cuerpo del 401 en `/api/` (SRV-05).
 const NO_AUTORIZADO_API: &str =
     r#"{"error":"no_autorizado","mensaje":"Falta el token de la sesión o no es válido."}"#;
+
+/// El cuerpo del 403 por un Host ajeno o ausente (SRV-06).
+const HOST_NO_PERMITIDO: &str =
+    r#"{"error":"host_no_permitido","mensaje":"El pedido no viene de esta computadora."}"#;
+
+/// Lo que el servidor necesita saber de su arranque para validar un pedido.
+#[derive(Clone)]
+struct Sesion {
+    token: Arc<str>,
+    puerto: u16,
+}
+
+/// Un Host propio es `127.0.0.1:P`, `[::1]:P` o `localhost:P`, sin
+/// distinguir mayúsculas (SRV-06). Se lee el encabezado `Host` tal cual, sin
+/// mirar `X-Forwarded-Host` ni la autoridad del camino.
+fn host_propio(host: Option<&str>, puerto: u16) -> bool {
+    host.is_some_and(|host| {
+        ["127.0.0.1", "[::1]", "localhost"]
+            .iter()
+            .any(|propio| host.eq_ignore_ascii_case(&format!("{propio}:{puerto}")))
+    })
+}
+
+/// Un 403 con su cuerpo JSON, en todas las familias.
+fn prohibido(cuerpo: &'static str) -> Response {
+    let tipo = [(header::CONTENT_TYPE, "application/json")];
+    (StatusCode::FORBIDDEN, tipo, cuerpo).into_response()
+}
 
 /// El valor de `token` en la consulta de un camino, si lo hay.
 fn token_de_la_consulta(consulta: &str) -> Option<&str> {
@@ -62,14 +90,20 @@ fn no_autorizado(camino: &str) -> Response {
     respuesta
 }
 
-/// Rechaza con 401 todo pedido sin el token antes de llegar a la ruta, sin
-/// ejecutar nada ni leer ningún archivo.
-async fn exigir_token(State(token): State<Arc<str>>, pedido: Request, siguiente: Next) -> Response {
-    if autenticado(&pedido, &token) {
-        siguiente.run(pedido).await
-    } else {
-        no_autorizado(pedido.uri().path())
+/// Rechaza el pedido antes de llegar a la ruta, sin ejecutar nada ni leer
+/// ningún archivo. Primero el Host (SRV-06), después el token (SRV-05).
+async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next) -> Response {
+    let host = pedido
+        .headers()
+        .get(header::HOST)
+        .and_then(|valor| valor.to_str().ok());
+    if !host_propio(host, sesion.puerto) {
+        return prohibido(HOST_NO_PERMITIDO);
     }
+    if !autenticado(&pedido, &sesion.token) {
+        return no_autorizado(pedido.uri().path());
+    }
+    siguiente.run(pedido).await
 }
 
 async fn inicio() -> Html<&'static str> {
@@ -84,9 +118,10 @@ fn atender(camino: &str, filtro: MethodFilter) -> MethodRouter {
     }
 }
 
-/// Las rutas del servidor, armadas solo desde `RUTAS`. La capa del token va
-/// al final, así cubre también las rutas inexistentes, que con token dan 404.
-pub fn rutas(token: Arc<str>) -> Router {
+/// Las rutas del servidor que escucha en `puerto`, armadas solo desde
+/// `RUTAS`. La capa que valida el pedido va al final, así cubre también las
+/// rutas inexistentes, que con token dan 404.
+pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
     let mut router = Router::new();
     for ruta in RUTAS {
         for metodo in ruta.metodos {
@@ -95,7 +130,8 @@ pub fn rutas(token: Arc<str>) -> Router {
             router = router.route(ruta.camino, atender(ruta.camino, filtro));
         }
     }
-    router.layer(middleware::from_fn_with_state(token, exigir_token))
+    let sesion = Sesion { token, puerto };
+    router.layer(middleware::from_fn_with_state(sesion, vigilar))
 }
 
 #[cfg(test)]
@@ -105,18 +141,25 @@ mod pruebas {
     use tower::ServiceExt;
 
     const TOKEN: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ";
+    const PUERTO: u16 = 40123;
+
+    fn servidor() -> Router {
+        rutas(Arc::from(TOKEN), PUERTO)
+    }
 
     async fn estado(pedido: axum::http::request::Builder) -> StatusCode {
-        let router = rutas(Arc::from(TOKEN));
-        router
+        servidor()
             .oneshot(pedido.body(Body::empty()).unwrap())
             .await
             .unwrap()
             .status()
     }
 
+    /// Un pedido con el Host propio, como los que manda el navegador.
     fn get(camino: &str) -> axum::http::request::Builder {
-        Request::builder().uri(camino)
+        Request::builder()
+            .uri(camino)
+            .header("Host", format!("127.0.0.1:{PUERTO}"))
     }
 
     #[test]
@@ -129,7 +172,7 @@ mod pruebas {
 
     #[tokio::test]
     async fn la_entrada_con_el_token_responde_la_pantalla_de_inicio() {
-        let respuesta = rutas(Arc::from(TOKEN))
+        let respuesta = servidor()
             .oneshot(
                 get(&format!("/?token={TOKEN}"))
                     .body(Body::empty())
@@ -217,7 +260,7 @@ mod pruebas {
 
     #[tokio::test]
     async fn sin_token_la_respuesta_es_la_de_su_familia() {
-        let respuesta = rutas(Arc::from(TOKEN))
+        let respuesta = servidor()
             .oneshot(get("/api/no-existe").body(Body::empty()).unwrap())
             .await
             .unwrap();
@@ -249,6 +292,74 @@ mod pruebas {
                 );
             }
         }
+    }
+
+    #[test]
+    fn los_host_propios_son_los_tres_de_loopback_con_el_puerto() {
+        for host in [
+            "127.0.0.1:40123",
+            "[::1]:40123",
+            "localhost:40123",
+            "LocalHost:40123",
+        ] {
+            assert!(host_propio(Some(host), PUERTO), "{host}");
+        }
+        for host in [
+            "ejemplo.invalid:40123",
+            "127.0.0.1:40124",
+            "127.0.0.1",
+            "localhost",
+            "127.0.0.1:40123.ejemplo.invalid",
+            "",
+        ] {
+            assert!(!host_propio(Some(host), PUERTO), "{host}");
+        }
+        assert!(!host_propio(None, PUERTO));
+    }
+
+    /// Un pedido con token válido y el Host dado, o sin Host.
+    async fn con_host(host: Option<&str>) -> Response {
+        let mut pedido = Request::builder()
+            .uri("/")
+            .header("Authorization", format!("Bearer {TOKEN}"));
+        if let Some(host) = host {
+            pedido = pedido.header("Host", host);
+        }
+        servidor()
+            .oneshot(pedido.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn un_host_ajeno_o_ausente_da_403_aunque_traiga_el_token() {
+        for host in [Some("ejemplo.invalid:40123"), Some("127.0.0.1:40124"), None] {
+            let respuesta = con_host(host).await;
+            assert_eq!(respuesta.status(), StatusCode::FORBIDDEN, "{host:?}");
+            assert_eq!(
+                encabezado(&respuesta, header::CONTENT_TYPE),
+                "application/json"
+            );
+            let cuerpo: serde_json::Value = serde_json::from_str(&texto(respuesta).await).unwrap();
+            assert_eq!(
+                cuerpo,
+                serde_json::json!({"error": "host_no_permitido", "mensaje": "El pedido no viene de esta computadora."})
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn el_host_se_valida_antes_que_el_token() {
+        let pedido = Request::builder()
+            .uri("/")
+            .header("Host", "ejemplo.invalid:40123");
+        assert_eq!(estado(pedido).await, StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn un_host_propio_con_token_es_atendido() {
+        let respuesta = con_host(Some("LOCALHOST:40123")).await;
+        assert_eq!(respuesta.status(), StatusCode::OK);
     }
 
     #[test]

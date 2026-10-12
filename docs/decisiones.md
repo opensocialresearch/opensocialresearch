@@ -6,6 +6,31 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-29.** Archivo `proyecto.toml` (PRY-03). Al abrir, `osr` valida
+  `proyecto.toml` antes de tomar el bloqueo, así un error no escribe nada en
+  la carpeta. Las claves obligatorias se revisan en el orden de la tabla,
+  `formato`, `version_formato`, `nombre` y `creado`, y la versión se mira
+  antes que `nombre` y `creado`, porque otra versión del formato puede tener
+  otras claves. Una clave obligatoria de otro tipo cuenta como faltante, y
+  `creado` tiene que ser una marca de tiempo con fecha, hora y
+  desplazamiento. La línea del error de TOML es la del primer byte del
+  tramo que señala el analizador, y el motivo es en español y fijo, `no es
+  TOML válido`, o `no está escrito en UTF-8`, porque el analizador da su
+  motivo en inglés y PRY-18 pide mensajes en español, así que el detalle no
+  llega a la persona. Si `proyecto.toml` existe pero no se puede leer, por
+  permisos o porque es una carpeta, `osr` termina con código 6 y `osr: no se
+  pudo leer proyecto.toml (<motivo>).`, un caso que la especificación no
+  fija y que queda como pregunta para el autor. Quedan fuera de este commit,
+  con sus requisitos, las claves opcionales con sus valores por defecto y el
+  aviso de valor no válido, que solo se ven en la interfaz y las usan PAR-01,
+  TRA-14, TRA-15 y TRA-17 (PRY-03.3 es `@interfaz`), la reescritura que
+  conserva comentarios y claves desconocidas, que es de PAR-06 (PRY-03.4 es
+  `@interfaz`), y el límite de 64 KiB, cuyo error la especificación no
+  define, pregunta para el autor. En los pasos, las alteraciones «con la app
+  cerrada» capturan solo `proyecto.toml` y sus claves de primer nivel, y se
+  define «un proyecto nuevo creado con `osr nuevo`», que deja el proyecto
+  abierto, con lo que PRY-02.1 corre y pasa (D-20).
+
 - **D-28.** Un solo proceso por proyecto (PRY-05). El bloqueo se escribe
   completo en un temporal de `.osr/` con el nombre de PRY-12 y se pone en su
   lugar con un enlace duro, que falla si ya existe, así dos procesos no lo

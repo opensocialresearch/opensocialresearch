@@ -9,6 +9,7 @@ mod estado;
 mod navegador;
 mod nuevo;
 mod plantillas;
+mod proyecto;
 mod registro;
 mod rutas;
 mod servidor;

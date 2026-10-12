@@ -189,3 +189,134 @@ fn una_linea_nueva(mundo: &mut Mundo, tipo: String) {
     let de_ese_tipo = nuevas.iter().filter(|e| e["tipo"] == tipo.as_str()).count();
     assert_eq!(de_ese_tipo, 1, "{nuevas:?}");
 }
+
+#[given("un proyecto nuevo creado con `osr nuevo`")]
+fn proyecto_nuevo(mundo: &mut Mundo) {
+    let proyecto = mundo.proyecto.to_string_lossy().into_owned();
+    mundo.lanzar(&format!("osr nuevo \"{proyecto}\" --sin-navegador"));
+}
+
+/// Los bytes de un archivo, que tienen que ser UTF-8 sin BOM, y su TOML.
+fn toml_de(mundo: &Mundo, archivo: &str) -> toml::Table {
+    let bytes = fs::read(mundo.ruta(archivo)).expect("leer el TOML");
+    assert!(!bytes.starts_with(b"\xEF\xBB\xBF"), "empieza con BOM");
+    let texto = String::from_utf8(bytes).expect("UTF-8");
+    texto.parse().expect("TOML 1.0 válido")
+}
+
+/// El valor de una clave con puntos, si está.
+fn valor_de<'a>(tabla: &'a toml::Table, clave: &str) -> Option<&'a toml::Value> {
+    let (primera, resto) = clave.split_once('.').unwrap_or((clave, ""));
+    let valor = tabla.get(primera)?;
+    match resto {
+        "" => Some(valor),
+        resto => valor_de(valor.as_table()?, resto),
+    }
+}
+
+/// Una celda de la tabla del escenario, que es un valor escrito en TOML.
+fn valor_toml(celda: &str) -> toml::Value {
+    let tabla: toml::Table = format!("v = {celda}").parse().expect("celda en TOML");
+    tabla["v"].clone()
+}
+
+#[then(regex = r#"^"([^"]+)" es TOML 1\.0 en UTF-8 sin BOM$"#)]
+fn es_toml(mundo: &mut Mundo, archivo: String) {
+    toml_de(mundo, &archivo);
+}
+
+#[then(regex = r#"^"([^"]+)" tiene estas claves con estos valores$"#)]
+fn claves_con_valores(mundo: &mut Mundo, archivo: String, step: &Step) {
+    let tabla = toml_de(mundo, &archivo);
+    for fila in &step.table.as_ref().expect("falta la tabla").rows[1..] {
+        let actual = valor_de(&tabla, &fila[0]);
+        assert_eq!(actual, Some(&valor_toml(&fila[1])), "{}", fila[0]);
+    }
+}
+
+#[then(
+    regex = r#"^cada una de estas claves de "([^"]+)", si está en el archivo, tiene este valor$"#
+)]
+fn claves_si_estan(mundo: &mut Mundo, archivo: String, step: &Step) {
+    let tabla = toml_de(mundo, &archivo);
+    for fila in &step.table.as_ref().expect("falta la tabla").rows[1..] {
+        if let Some(actual) = valor_de(&tabla, &fila[0]) {
+            assert_eq!(actual, &valor_toml(&fila[1]), "{}", fila[0]);
+        }
+    }
+}
+
+#[then(
+    regex = r#"^la clave "([^"]+)" de "([^"]+)" es una marca de tiempo ISO 8601 con desplazamiento y precisión de segundos$"#
+)]
+fn es_marca_de_tiempo(mundo: &mut Mundo, clave: String, archivo: String) {
+    let tabla = toml_de(mundo, &archivo);
+    let fecha = valor_de(&tabla, &clave)
+        .and_then(toml::Value::as_datetime)
+        .unwrap_or_else(|| panic!("{clave} no es una fecha y hora"));
+    let hora = fecha.time.expect("sin hora");
+    assert!(fecha.date.is_some() && fecha.offset.is_some(), "{fecha}");
+    assert_eq!(hora.nanosecond, None, "sin fracción de segundo: {fecha}");
+    assert_eq!(fecha.to_string().len(), 25, "{fecha}");
+}
+
+fn proyecto_toml(mundo: &Mundo) -> (std::path::PathBuf, String) {
+    let ruta = mundo.ruta("proyecto.toml");
+    let texto = fs::read_to_string(&ruta).expect("leer proyecto.toml");
+    (ruta, texto)
+}
+
+/// Reemplaza en `proyecto.toml` las líneas que `cambiar` devuelve distintas
+/// y exige que haya cambiado alguna.
+fn cambiar_lineas(mundo: &Mundo, cambiar: impl Fn(usize, &str) -> Option<String>) {
+    let (ruta, texto) = proyecto_toml(mundo);
+    let mut cambio = false;
+    let mut nuevo = String::new();
+    for (indice, linea) in texto.lines().enumerate() {
+        if let Some(otra) = cambiar(indice + 1, linea) {
+            cambio = true;
+            nuevo.push_str(&otra);
+        } else {
+            nuevo.push_str(linea);
+            nuevo.push('\n');
+        }
+    }
+    assert!(cambio, "no cambió ninguna línea de proyecto.toml");
+    fs::write(ruta, nuevo).expect("escribir proyecto.toml");
+}
+
+// Solo `proyecto.toml` y sus claves de primer nivel, que son las que lee
+// PRY-03. Las demás alteraciones llegan con sus requisitos (D-20).
+#[given(
+    regex = r#"^con la app cerrada se cambia en "proyecto\.toml" la clave "([a-z_]+)" a (.+)$"#
+)]
+fn cambia_clave(mundo: &mut Mundo, clave: String, valor: String) {
+    let inicio = format!("{clave} = ");
+    cambiar_lineas(mundo, |_, linea| {
+        linea
+            .starts_with(&inicio)
+            .then(|| format!("{inicio}{valor}\n"))
+    });
+}
+
+#[given(regex = r#"^con la app cerrada se quita de "proyecto\.toml" la clave "([a-z_]+)"$"#)]
+fn quita_clave(mundo: &mut Mundo, clave: String) {
+    let inicio = format!("{clave} = ");
+    cambiar_lineas(mundo, |_, linea| {
+        linea.starts_with(&inicio).then(String::new)
+    });
+}
+
+#[given(
+    regex = r#"^con la app cerrada se reemplaza la línea (\d+) de "proyecto\.toml" por "(.*)"$"#
+)]
+fn reemplaza_linea(mundo: &mut Mundo, numero: usize, texto: String) {
+    cambiar_lineas(mundo, |indice, _| {
+        (indice == numero).then(|| format!("{texto}\n"))
+    });
+}
+
+#[given(r#"con la app cerrada se borra el archivo "proyecto.toml""#)]
+fn borra_proyecto_toml(mundo: &mut Mundo) {
+    fs::remove_file(proyecto_toml(mundo).0).expect("borrar proyecto.toml");
+}

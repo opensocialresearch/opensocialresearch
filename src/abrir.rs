@@ -1,6 +1,6 @@
 //! `osr abrir`: abre un proyecto existente (PRY-04).
 //!
-//! Abrir es comprobar la carpeta, tomar el bloqueo (PRY-05) y anotar la
+//! Abrir es comprobar la carpeta, validar `proyecto.toml` (PRY-03), tomar el bloqueo (PRY-05) y anotar la
 //! verificación al abrir (PRY-11, D-17). El servidor lo levanta el arranque.
 //! Si algo falla después de tomar el bloqueo, se suelta.
 
@@ -10,12 +10,13 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use crate::nuevo::{self, Momento};
-use crate::{bloqueo, plantillas};
+use crate::{bloqueo, plantillas, proyecto};
 
 /// Errores de `osr abrir`, con su código de salida.
 #[derive(Debug)]
 pub enum Error {
     NoExiste(PathBuf),
+    Proyecto(proyecto::Error),
     Abierto(u32),
     Escritura(PathBuf, io::Error),
 }
@@ -24,6 +25,7 @@ impl Error {
     pub fn codigo(&self) -> i32 {
         match self {
             Error::NoExiste(_) => 3,
+            Error::Proyecto(error) => error.codigo(),
             Error::Abierto(_) => 4,
             Error::Escritura(..) => 6,
         }
@@ -34,6 +36,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::NoExiste(ruta) => write!(f, "no existe la carpeta {}.", ruta.display()),
+            Error::Proyecto(error) => error.fmt(f),
             Error::Abierto(pid) => write!(
                 f,
                 "el proyecto ya está abierto en otro proceso (PID {pid}). Hay que usar esa pestaña o cerrar ese proceso."
@@ -76,6 +79,7 @@ pub fn abrir(ruta: &Path, momento: &Momento) -> Result<(), Error> {
     if !ruta.is_dir() {
         return Err(Error::NoExiste(ruta.to_path_buf()));
     }
+    proyecto::validar(ruta).map_err(Error::Proyecto)?;
     let escritura = |error| Error::Escritura(ruta.to_path_buf(), error);
     let abandonado = match bloqueo::tomar(ruta, &momento.marca) {
         Ok(abandonado) => abandonado,
@@ -161,6 +165,21 @@ mod pruebas {
         .concat();
         assert!(registro.ends_with(&esperado), "{registro}");
         assert_eq!(registro.lines().count(), 3);
+    }
+
+    #[test]
+    fn un_proyecto_toml_invalido_no_abre_ni_escribe_nada() {
+        let (_tmp, raiz) = proyecto();
+        fs::remove_file(raiz.join("proyecto.toml")).unwrap();
+        let error = abrir(&raiz, &momento()).unwrap_err();
+        assert_eq!(error.codigo(), 3);
+        assert!(
+            error.to_string().ends_with("(falta proyecto.toml)."),
+            "{error}"
+        );
+        assert!(!raiz.join(".osr/bloqueo").exists());
+        let registro = fs::read_to_string(raiz.join("bitacora/registro.jsonl")).unwrap();
+        assert_eq!(registro.lines().count(), 1);
     }
 
     #[test]

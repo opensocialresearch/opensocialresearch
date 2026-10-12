@@ -6,6 +6,16 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-21.** Los escenarios `@recorrido-completo` no entran en la corrida
+  estricta de cada requisito, porque se verifican sobre el proyecto de prueba
+  después de ejecutar todas las acciones del tramo, y ese recorrido no existe
+  hasta que el tramo esté implementado. Corren todos juntos al cerrar el tramo,
+  con su propio paso de recorrido. Hasta entonces cuentan como omitidos en el
+  avance. No se debilita ningún escenario, solo se fija cuándo se ejecuta.
+- **Diseño de la interfaz.** El diseño hecho en Claude Design queda como
+  referencia en [diseno/README.md](diseno/README.md), con los tokens y las
+  notas para implementar. Si difiere de un escenario aprobado, manda el
+  escenario.
 - **D-20.** Las definiciones de pasos se acotan a lo que ya está implementado.
   Un paso compartido entre requisitos, como «se ejecuta `...`», captura solo
   las órdenes que existen (hoy `osr nuevo`), para que los escenarios de

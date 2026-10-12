@@ -23,7 +23,8 @@ cargo test -q --bins
 
 if [[ -n "$etiqueta" ]]; then
   paso "escenarios $etiqueta"
-  OSR_ESTRICTO=1 cargo test -q --test escenarios -- --tags "$etiqueta and not @manual and not @interfaz and not @equipo-autor"
+  # @recorrido-completo espera el recorrido de todo el tramo y corre al cerrarlo (D-21).
+  OSR_ESTRICTO=1 cargo test -q --test escenarios -- --tags "$etiqueta and not @manual and not @interfaz and not @equipo-autor and not @recorrido-completo"
 fi
 
 paso "cobertura y CRAP (umbral 30)"

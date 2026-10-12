@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Social Research</title>
+<link rel="stylesheet" href="/recursos/estilos.css">
+<script src="/recursos/entrada.js"></script>
+</head>
+<body>
+<header class="encabezado">
+  <span class="marca">Open Social Research</span>
+</header>
+<main class="columna">
+  <p class="rotulo">Sin proyecto abierto</p>
+  <h1 class="display">Abrir un proyecto o crear uno nuevo.</h1>
+  <p class="entrada">Un proyecto es una carpeta de esta computadora. Todo lo que se registra queda en ella, en archivos de texto abierto.</p>
+  <ol class="pasos">
+    <li>
+      <span class="numero">01</span>
+      <section>
+        <h2>Abrir proyecto</h2>
+        <form>
+          <label class="campo"><span>Carpeta del proyecto</span><input class="mono" name="ruta" required></label>
+          <div class="acciones">
+            <button class="boton principal" disabled>Abrir proyecto</button>
+            <span class="pequeno">Todavía no se abre desde aquí. Por ahora, <span class="mono">osr abrir &lt;carpeta&gt;</span> en la terminal.</span>
+          </div>
+        </form>
+      </section>
+    </li>
+    <li>
+      <span class="numero">02</span>
+      <section>
+        <h2>Crear proyecto</h2>
+        <form>
+          <label class="campo"><span>Carpeta nueva o vacía</span><input class="mono" name="ruta" required></label>
+          <label class="campo"><span>Nombre</span><input name="nombre"></label>
+          <div class="acciones">
+            <button class="boton" disabled>Crear proyecto</button>
+            <span class="pequeno">Todavía no se crea desde aquí. Por ahora, <span class="mono">osr nuevo &lt;carpeta&gt;</span> en la terminal.</span>
+          </div>
+        </form>
+      </section>
+    </li>
+  </ol>
+  <p class="pie">Todo queda en esta computadora. Sin cuentas ni conexión a internet.</p>
+</main>
+</body>
+</html>

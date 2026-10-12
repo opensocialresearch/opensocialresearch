@@ -21,6 +21,10 @@ pub const RUTAS: &[Ruta] = &[
         metodos: &["GET"],
     },
     Ruta {
+        camino: "/recursos/{*camino}",
+        metodos: &["GET"],
+    },
+    Ruta {
         camino: "/audio/{entrevista}",
         metodos: &["GET"],
     },

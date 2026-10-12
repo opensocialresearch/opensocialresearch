@@ -6,6 +6,42 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-40.** El diseño de Claude Design se usa desde la primera página
+  (SRV-04, SRV-10). Carlos pidió que la estética del proyecto de diseño
+  ([docs/diseno/README.md](diseno/README.md)) se aplique desde el principio,
+  no al final con la interfaz en Svelte. Toda página que sirva el programa
+  usa sus tokens, su tipografía y sus componentes, y si el diseño y un
+  escenario aprobado no coinciden, manda el escenario. La política de SRV-08
+  (`style-src 'self'`, `script-src 'self'`, `font-src 'self'`) bloquea los
+  estilos, el código y las fuentes escritos dentro de la página, que es
+  por qué la primera versión de la pantalla de inicio se veía sin formato.
+  Por eso primero se implementan la cookie de sesión de SRV-04 y la familia
+  `/recursos/…` de SRV-10, y la interfaz pide aparte `estilos.css`,
+  `entrada.js` (que quita `?token=` de la dirección) y las fuentes. Con esto
+  se responde la nota «[verificar que la interfaz compilada no necesita
+  estilos en línea]» de la tabla de SRV-08: no los necesita, la política no
+  cambia. Los archivos viven en `recursos/` y entran al programa al compilar.
+  Las fuentes son Archivo, IBM Plex Mono y Source Serif 4, el subconjunto
+  latino en WOFF2 que sirve Google Fonts, sin modificar y con sus avisos de
+  la SIL Open Font License 1.1 (`recursos/fuentes/`). Otras decisiones del
+  cambio:
+  - La entrada `GET /?token=<x>` con `<x>` inválido responde 401 aunque el
+    pedido traiga otro canal válido, como dice el error de SRV-04, y la
+    cookie la pone solo esa entrada.
+  - La pantalla sin proyecto no tiene diseño propio en Claude Design, así que
+    se armó con las piezas del sistema: el encabezado del marco, el rótulo,
+    el título display y los bloques numerados de la vista de proyecto vacío.
+    «Abrir proyecto» es el botón principal y «Crear proyecto» el
+    secundario. Los dos quedan inactivos, con el motivo y la orden de la
+    terminal al lado, porque abrir y crear desde la interfaz todavía no
+    están implementados.
+  - La página del 401 queda sin estilos. Sin la sesión no puede pedir la
+    hoja de estilos, y la política bloquea los estilos en línea. Darle
+    formato pediría un hash en la política, que no se cambia sin el autor.
+  - El tablero de inicio del diseño (`Inicio.dc.html`) es el «Resumen del
+    proyecto» y depende de PAR y TRA. Mientras tanto, `osr abrir` muestra la
+    pantalla sin proyecto.
+
 - **D-39.** Audio con pedidos por rangos (SRV-11). `GET /audio/{entrevista}`
   entra en `src/rutas.rs` y con eso en las baterías de SRV-05.1, SRV-08.1 y
   SRV-10. Se escribe a mano y no con `ServeFile` de tower-http, que no es

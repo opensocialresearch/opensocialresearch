@@ -11,6 +11,7 @@ mod navegador;
 mod nuevo;
 mod plantillas;
 mod proyecto;
+mod recursos;
 mod registro;
 mod rutas;
 mod servidor;

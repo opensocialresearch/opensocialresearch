@@ -1,5 +1,5 @@
-//! El servidor local: rutas, Host, origen, token y encabezados de todas las
-//! respuestas (SRV-01, SRV-05 a SRV-11).
+//! El servidor local: rutas, Host, origen, token, cookie de sesión y
+//! encabezados de todas las respuestas (SRV-01, SRV-04 a SRV-11).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -12,13 +12,13 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{MethodFilter, MethodRouter, on};
 
 use crate::rutas::RUTAS;
-use crate::{audio, registro, token};
+use crate::{audio, recursos, registro, token};
 
 /// La pantalla sin proyecto, con `Abrir proyecto` y `Crear proyecto`.
-const INICIO: &str = include_str!("inicio.html");
+const INICIO: &str = include_str!("paginas/inicio.html");
 
 /// La página del 401 fuera de `/api/` (SRV-05).
-const NO_AUTORIZADO: &str = include_str!("no_autorizado.html");
+const NO_AUTORIZADO: &str = include_str!("paginas/no_autorizado.html");
 
 /// El cuerpo del 401 en `/api/` (SRV-05).
 const NO_AUTORIZADO_API: &str =
@@ -132,19 +132,46 @@ fn entrada(pedido: &Request) -> Option<&str> {
         .flatten()
 }
 
-/// Un pedido está autenticado si trae el token en `Authorization: Bearer`,
-/// o si es la entrada `GET /?token=<token>`, la única que lo lleva en el
-/// camino (SRV-05). La cookie de sesión llega con SRV-04.
-fn autenticado(pedido: &Request, token: &str) -> bool {
+/// El valor de la cookie `osr_<puerto>` del pedido, si la trae. Las cookies
+/// con otro nombre se ignoran (SRV-04).
+fn cookie_de_sesion(pedido: &Request, puerto: u16) -> Option<&str> {
+    let nombre = format!("osr_{puerto}=");
+    pedido
+        .headers()
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|valor| valor.to_str().ok())
+        .flat_map(|valor| valor.split(';'))
+        .find_map(|par| par.trim().strip_prefix(nombre.as_str()))
+}
+
+/// Un pedido está autenticado si trae el token en `Authorization: Bearer` o
+/// en la cookie de sesión, o si es la entrada `GET /?token=<token>`, la única
+/// que lo lleva en el camino (SRV-04, SRV-05). La entrada con un token
+/// inválido no pasa aunque traiga otro canal válido.
+fn autenticado(pedido: &Request, sesion: &Sesion) -> bool {
+    if let Some(traido) = entrada(pedido) {
+        return token::iguales(traido, &sesion.token);
+    }
     let portador = pedido
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|valor| valor.to_str().ok())
         .and_then(|valor| valor.strip_prefix("Bearer "));
-    [portador, entrada(pedido)]
+    [portador, cookie_de_sesion(pedido, sesion.puerto)]
         .into_iter()
         .flatten()
-        .any(|traido| token::iguales(traido, token))
+        .any(|traido| token::iguales(traido, &sesion.token))
+}
+
+/// La cookie de sesión que pone la entrada, sin vencimiento (SRV-04).
+fn poner_cookie(respuesta: &mut Response, sesion: &Sesion) {
+    let cookie = format!(
+        "osr_{}={}; HttpOnly; SameSite=Strict; Path=/",
+        sesion.puerto, sesion.token
+    );
+    let cookie = HeaderValue::from_str(&cookie).expect("el token es ASCII visible");
+    respuesta.headers_mut().append(header::SET_COOKIE, cookie);
 }
 
 /// El 401 con `WWW-Authenticate` y el cuerpo de la familia del camino.
@@ -172,7 +199,7 @@ fn rechazo(pedido: &Request, sesion: &Sesion) -> Option<(&'static str, Response)
     if !origen_permitido(pedido, sesion.puerto) {
         return Some(("origen_no_permitido", prohibido(ORIGEN_NO_PERMITIDO)));
     }
-    if !autenticado(pedido, &sesion.token) {
+    if !autenticado(pedido, sesion) {
         return Some(("no_autorizado", no_autorizado(pedido.uri().path())));
     }
     None
@@ -191,16 +218,20 @@ fn linea_de_rechazo(pedido: &Request, estado: StatusCode, motivo: &str) -> Strin
 }
 
 /// Rechaza el pedido antes de llegar a la ruta, sin ejecutar nada ni leer
-/// ningún archivo, y lo anota en el registro técnico.
+/// ningún archivo, y lo anota en el registro técnico. A la entrada con el
+/// token le pone la cookie de sesión.
 async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next) -> Response {
-    match rechazo(&pedido, &sesion) {
-        Some((motivo, respuesta)) => {
-            let linea = linea_de_rechazo(&pedido, respuesta.status(), motivo);
-            (sesion.anotar)("aviso", &linea);
-            respuesta
-        }
-        None => siguiente.run(pedido).await,
+    if let Some((motivo, respuesta)) = rechazo(&pedido, &sesion) {
+        let linea = linea_de_rechazo(&pedido, respuesta.status(), motivo);
+        (sesion.anotar)("aviso", &linea);
+        return respuesta;
     }
+    let es_entrada = entrada(&pedido).is_some();
+    let mut respuesta = siguiente.run(pedido).await;
+    if es_entrada {
+        poner_cookie(&mut respuesta, &sesion);
+    }
+    respuesta
 }
 
 async fn inicio() -> Html<&'static str> {
@@ -225,6 +256,10 @@ fn audio(proyecto: Option<Arc<Path>>, filtro: MethodFilter) -> MethodRouter {
 fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter {
     match camino {
         "/" => on(filtro, inicio),
+        "/recursos/{*camino}" => on(
+            filtro,
+            |extract::Path(camino): extract::Path<String>| async move { recursos::servir(&camino) },
+        ),
         "/audio/{entrevista}" => audio(sesion.proyecto.clone(), filtro),
         otro => panic!("la ruta {otro} de RUTAS no tiene manejador"),
     }
@@ -344,6 +379,88 @@ mod pruebas {
         assert_eq!(estado(otro).await, StatusCode::UNAUTHORIZED);
         let sin_bearer = get("/").header("Authorization", TOKEN);
         assert_eq!(estado(sin_bearer).await, StatusCode::UNAUTHORIZED);
+    }
+
+    async fn respuesta(pedido: axum::http::request::Builder) -> Response {
+        servidor()
+            .oneshot(pedido.body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn la_entrada_pone_la_cookie_de_sesion_sin_vencimiento() {
+        let entrada = respuesta(get(&format!("/?token={TOKEN}"))).await;
+        let cookies: Vec<_> = entrada
+            .headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .map(|valor| valor.to_str().unwrap().to_string())
+            .collect();
+        assert_eq!(
+            cookies,
+            [format!(
+                "osr_{PUERTO}={TOKEN}; HttpOnly; SameSite=Strict; Path=/"
+            )]
+        );
+    }
+
+    #[tokio::test]
+    async fn solo_la_entrada_pone_la_cookie() {
+        let portador = get("/").header("Authorization", format!("Bearer {TOKEN}"));
+        let con_cookie = get("/").header("Cookie", format!("osr_{PUERTO}={TOKEN}"));
+        let rechazada = get("/?token=otro");
+        for pedido in [portador, con_cookie, rechazada] {
+            let respuesta = respuesta(pedido).await;
+            assert!(respuesta.headers().get(header::SET_COOKIE).is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn la_cookie_de_sesion_autentica_entre_otras_cookies() {
+        let sola = get("/").header("Cookie", format!("osr_{PUERTO}={TOKEN}"));
+        assert_eq!(estado(sola).await, StatusCode::OK);
+        let entre_otras = get("/").header("Cookie", format!("a=1; osr_{PUERTO}={TOKEN}; b=2"));
+        assert_eq!(estado(entre_otras).await, StatusCode::OK);
+        let en_otro_encabezado = get("/")
+            .header("Cookie", "a=1")
+            .header("Cookie", format!("osr_{PUERTO}={TOKEN}"));
+        assert_eq!(estado(en_otro_encabezado).await, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn una_cookie_de_otro_nombre_o_con_otro_token_no_autentica() {
+        let otro_puerto = get("/").header("Cookie", format!("osr_{}={TOKEN}", PUERTO + 1));
+        assert_eq!(estado(otro_puerto).await, StatusCode::UNAUTHORIZED);
+        let otro_token = get("/").header("Cookie", format!("osr_{PUERTO}=otro"));
+        assert_eq!(estado(otro_token).await, StatusCode::UNAUTHORIZED);
+        let prefijo = get("/").header("Cookie", format!("xosr_{PUERTO}={TOKEN}"));
+        assert_eq!(estado(prefijo).await, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn la_entrada_con_un_token_invalido_no_pasa_con_otro_canal_valido() {
+        let pedido = get("/?token=otro").header("Authorization", format!("Bearer {TOKEN}"));
+        assert_eq!(estado(pedido).await, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn los_recursos_piden_la_sesion_y_se_sirven_con_ella() {
+        assert_eq!(
+            estado(get("/recursos/estilos.css")).await,
+            StatusCode::UNAUTHORIZED
+        );
+        let con_cookie =
+            get("/recursos/estilos.css").header("Cookie", format!("osr_{PUERTO}={TOKEN}"));
+        let estilos = respuesta(con_cookie).await;
+        assert_eq!(estilos.status(), StatusCode::OK);
+        assert_eq!(
+            estilos.headers()[header::CONTENT_TYPE],
+            "text/css; charset=utf-8"
+        );
+        let inexistente =
+            get("/recursos/no-existe.js").header("Cookie", format!("osr_{PUERTO}={TOKEN}"));
+        assert_eq!(estado(inexistente).await, StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
@@ -748,11 +865,16 @@ mod pruebas {
     }
 
     /// Un camino concreto para un patrón de axum, con `E01` en cada segmento
-    /// variable, como lo arma la prueba de SRV-10.
+    /// variable, como lo arma la prueba de SRV-10, salvo el comodín de
+    /// `/recursos/`, que lleva un recurso que existe.
     fn camino_concreto(patron: &str) -> String {
         patron
             .split('/')
-            .map(|parte| if parte.starts_with('{') { "E01" } else { parte })
+            .map(|parte| match parte {
+                "{*camino}" => "estilos.css",
+                variable if variable.starts_with('{') => "E01",
+                fijo => fijo,
+            })
             .collect::<Vec<_>>()
             .join("/")
     }

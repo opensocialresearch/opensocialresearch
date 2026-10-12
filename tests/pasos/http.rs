@@ -90,6 +90,13 @@ fn con_token(mundo: &mut Mundo) {
     mundo.encabezado("Authorization", valor);
 }
 
+// Solo la cookie de la sesión, con el puerto del escenario (SRV-04, D-20).
+#[given(regex = r#"^el pedido lleva el token válido en la cookie "(osr_\{P\})"$"#)]
+fn con_cookie(mundo: &mut Mundo, nombre: String) {
+    let valor = format!("{}={}", mundo.resolver(&nombre), mundo.token_valido());
+    mundo.encabezado("Cookie", valor);
+}
+
 impl Pedido {
     pub fn nuevo(metodo: &str, direccion: String) -> Pedido {
         Pedido {
@@ -306,6 +313,64 @@ async fn interfaz(mundo: &Mundo) -> String {
         .await;
     assert_eq!(respuesta.estado, 200);
     respuesta.cuerpo
+}
+
+#[then("la respuesta trae la interfaz")]
+async fn trae_la_interfaz(mundo: &mut Mundo) {
+    let esperada = interfaz(mundo).await;
+    assert_eq!(mundo.la_respuesta().cuerpo, esperada);
+}
+
+/// El `Set-Cookie` de la respuesta para la cookie `nombre`, partido en su
+/// par `nombre=valor` y sus atributos.
+fn cookie_puesta(mundo: &Mundo, nombre: &str) -> (String, Vec<String>) {
+    let nombre = mundo.resolver(nombre);
+    let puesta = mundo
+        .la_respuesta()
+        .encabezados
+        .iter()
+        .filter(|(n, _)| n == "set-cookie")
+        .find(|(_, v)| v.starts_with(&format!("{nombre}=")))
+        .unwrap_or_else(|| panic!("la respuesta no pone la cookie {nombre}"));
+    let mut partes = puesta.1.split(';').map(|parte| parte.trim().to_string());
+    let par = partes.next().unwrap();
+    (par, partes.collect())
+}
+
+#[then(
+    regex = r#"^la respuesta pone la cookie "(osr_\{P\})" con valor "(\{token\})" y los atributos "(HttpOnly)", "(SameSite=Strict)" y "(Path=/)"$"#
+)]
+fn pone_la_cookie(
+    mundo: &mut Mundo,
+    nombre: String,
+    valor: String,
+    uno: String,
+    dos: String,
+    tres: String,
+) {
+    let (par, atributos) = cookie_puesta(mundo, &nombre);
+    let esperado = format!("{}={}", mundo.resolver(&nombre), mundo.resolver(&valor));
+    assert_eq!(par, esperado);
+    for atributo in [uno, dos, tres] {
+        assert!(
+            atributos.contains(&atributo),
+            "falta {atributo}: {atributos:?}"
+        );
+    }
+}
+
+#[then(regex = r#"^la cookie "(osr_\{P\})" no tiene "(Expires)" ni "(Max-Age)"$"#)]
+fn cookie_sin_vencimiento(mundo: &mut Mundo, nombre: String, uno: String, dos: String) {
+    let (_, atributos) = cookie_puesta(mundo, &nombre);
+    for prohibido in [uno, dos] {
+        let prohibido = prohibido.to_ascii_lowercase();
+        assert!(
+            !atributos
+                .iter()
+                .any(|a| a.to_ascii_lowercase().starts_with(&prohibido)),
+            "{atributos:?}"
+        );
+    }
 }
 
 #[when("se guarda el estado que muestra la app")]

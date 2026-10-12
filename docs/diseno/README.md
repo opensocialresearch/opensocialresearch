@@ -6,8 +6,10 @@ https://claude.ai/design/p/b1686b60-6c9c-4724-9961-8d79fb5e93f2 y no se copia
 acá, porque cada archivo depende del entorno de Claude Design (`support.js` y
 sus componentes `dc-import`).
 
-Es referencia, no contrato. Si el diseño y un escenario aprobado no coinciden,
-manda el escenario.
+Toda página que sirve el programa lo usa desde la primera versión (D-40). No
+es contrato: si el diseño y un escenario aprobado no coinciden, manda el
+escenario. La hoja de estilos con los tokens está en `recursos/estilos.css` y
+las fuentes en `recursos/fuentes/`.
 
 ## Cómo leerlo
 

@@ -7,10 +7,11 @@
 //!
 //!     OSR_ESTRICTO=1 cargo test --test escenarios -- --tags @PRY-01
 
+mod pasos;
+
 use cucumber::World;
 
-#[derive(Debug, Default, World)]
-pub struct Mundo {}
+pub use pasos::Mundo;
 
 #[tokio::main]
 async fn main() {

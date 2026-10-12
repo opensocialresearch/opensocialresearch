@@ -43,6 +43,21 @@ entrevista, una tabla, un mapa y un texto de prensa viven en el mismo proyecto
 y se pueden cruzar, por ejemplo, ver en el mapa los lugares que mencionan las
 personas entrevistadas junto a los datos policiales de esa zona.
 
+**Orquestar, no reinventar.** R y Python son los lenguajes más potentes para
+analizar datos, y tienen detrás comunidades enteras. La herramienta no compite
+con ellos, los pone al alcance. Se encarga de instalarlos, de manejar los
+entornos y los paquetes de cada proyecto y de conectar sus resultados con el
+resto del trabajo, para que nadie tenga que salir a otra aplicación ni pelear
+con dependencias.
+
+**Opinionada, con andamiaje.** Para quien empieza, la herramienta propone un
+camino, por ejemplo cómo calcular el tamaño de una muestra o cómo organizar un
+libro de códigos, y cita de dónde sale cada criterio. Es la idea de andamiaje,
+un apoyo que permite hacer lo que todavía no se podría solo y que se retira a
+medida que se gana dominio (Wood et al., 1976). Ese apoyo está hecho de código
+visible y editable, así que quien ya sabe lo cambia o escribe el suyo. El
+camino recomendado es el más simple, no el único correcto.
+
 **La IA ayuda, quien investiga decide.** La inteligencia artificial transcribe,
 sugiere, resume y clasifica, pero no firma. Toda propuesta de la IA queda
 marcada como tal hasta que una persona la acepta, y queda registrada. Siguiendo
@@ -162,3 +177,6 @@ que la herramienta llegue lo más lejos posible.
   ciencias sociales. Una perspectiva pluralista*. Akal.
 - Flick, U. (2015). *El diseño de investigación cualitativa*. Morata.
 - Kvale, S. (2011). *Las entrevistas en investigación cualitativa*. Morata.
+- Wood, D., Bruner, J. S. y Ross, G. (1976). The role of tutoring in problem
+  solving. *Journal of Child Psychology and Psychiatry*, *17*(2), 89-100.
+  https://doi.org/10.1111/j.1469-7610.1976.tb00381.x

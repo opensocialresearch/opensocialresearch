@@ -1,4 +1,5 @@
-//! El servidor local: rutas, Host, origen y token (SRV-01, SRV-05 a SRV-07).
+//! El servidor local: rutas, Host, origen, token y encabezados de todas las
+//! respuestas (SRV-01, SRV-05 a SRV-09).
 
 use std::sync::Arc;
 
@@ -29,6 +30,31 @@ const HOST_NO_PERMITIDO: &str =
 /// El cuerpo del 403 por un pedido que viene de otra página (SRV-07).
 const ORIGEN_NO_PERMITIDO: &str =
     r#"{"error":"origen_no_permitido","mensaje":"El pedido viene de otra página."}"#;
+
+/// Los encabezados que lleva toda respuesta, también las de error (SRV-09).
+const ENCABEZADOS: [(&str, &str); 7] = [
+    (
+        "content-security-policy",
+        "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    ),
+    ("x-content-type-options", "nosniff"),
+    ("referrer-policy", "no-referrer"),
+    ("cache-control", "no-store"),
+    ("cross-origin-opener-policy", "same-origin"),
+    ("cross-origin-resource-policy", "same-origin"),
+    ("x-frame-options", "DENY"),
+];
+
+/// Pone los encabezados de SRV-09 en una respuesta, reemplazando los que ya
+/// tuviera con el mismo nombre.
+async fn con_encabezados(mut respuesta: Response) -> Response {
+    for (nombre, valor) in ENCABEZADOS {
+        respuesta
+            .headers_mut()
+            .insert(nombre, HeaderValue::from_static(valor));
+    }
+    respuesta
+}
 
 /// Lo que el servidor necesita saber de su arranque para validar un pedido.
 #[derive(Clone)]
@@ -164,7 +190,8 @@ fn atender(camino: &str, filtro: MethodFilter) -> MethodRouter {
 
 /// Las rutas del servidor que escucha en `puerto`, armadas solo desde
 /// `RUTAS`. La capa que valida el pedido va al final, así cubre también las
-/// rutas inexistentes, que con token dan 404.
+/// rutas inexistentes, que con token dan 404, y la de los encabezados de
+/// SRV-09 la envuelve, así llegan también a los 401, 403, 404 y 405.
 pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
     let mut router = Router::new();
     for ruta in RUTAS {
@@ -175,7 +202,9 @@ pub fn rutas(token: Arc<str>, puerto: u16) -> Router {
         }
     }
     let sesion = Sesion { token, puerto };
-    router.layer(middleware::from_fn_with_state(sesion, vigilar))
+    router
+        .layer(middleware::from_fn_with_state(sesion, vigilar))
+        .layer(middleware::map_response(con_encabezados))
 }
 
 #[cfg(test)]
@@ -504,6 +533,85 @@ mod pruebas {
             cuerpo,
             serde_json::json!({"error": "origen_no_permitido", "mensaje": "El pedido viene de otra página."})
         );
+    }
+
+    /// Los siete encabezados exactos de SRV-09, como los escribe el escenario.
+    fn tiene_los_siete(respuesta: &Response) {
+        let esperados = [
+            (
+                "Content-Security-Policy",
+                "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+            ),
+            ("X-Content-Type-Options", "nosniff"),
+            ("Referrer-Policy", "no-referrer"),
+            ("Cache-Control", "no-store"),
+            ("Cross-Origin-Opener-Policy", "same-origin"),
+            ("Cross-Origin-Resource-Policy", "same-origin"),
+            ("X-Frame-Options", "DENY"),
+        ];
+        for (nombre, valor) in esperados {
+            let encontrados: Vec<_> = respuesta.headers().get_all(nombre).iter().collect();
+            assert_eq!(encontrados, [valor], "{nombre} en {}", respuesta.status());
+        }
+        assert!(
+            !respuesta
+                .headers()
+                .keys()
+                .any(|nombre| nombre.as_str().starts_with("access-control-")),
+            "{}",
+            respuesta.status()
+        );
+    }
+
+    #[tokio::test]
+    async fn toda_respuesta_lleva_los_siete_encabezados() {
+        let con_token = format!("Bearer {TOKEN}");
+        let pedidos = [
+            (get("/").header("Authorization", &con_token), StatusCode::OK),
+            (get("/"), StatusCode::UNAUTHORIZED),
+            (
+                Request::builder()
+                    .uri("/")
+                    .header("Host", "ejemplo.invalid:40123"),
+                StatusCode::FORBIDDEN,
+            ),
+            (
+                get("/").method("POST").header("Authorization", &con_token),
+                StatusCode::FORBIDDEN,
+            ),
+            (
+                get("/no-existe").header("Authorization", &con_token),
+                StatusCode::NOT_FOUND,
+            ),
+            (
+                get("/")
+                    .method("OPTIONS")
+                    .header("Authorization", &con_token)
+                    .header("Origin", PROPIO),
+                StatusCode::METHOD_NOT_ALLOWED,
+            ),
+        ];
+        for (pedido, esperado) in pedidos {
+            let respuesta = servidor()
+                .oneshot(pedido.body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(respuesta.status(), esperado);
+            tiene_los_siete(&respuesta);
+        }
+    }
+
+    #[tokio::test]
+    async fn los_encabezados_reemplazan_a_los_de_la_ruta() {
+        let respuesta = (
+            [
+                (header::CACHE_CONTROL, "max-age=60"),
+                (header::X_FRAME_OPTIONS, "SAMEORIGIN"),
+            ],
+            "x",
+        )
+            .into_response();
+        tiene_los_siete(&con_encabezados(respuesta).await);
     }
 
     #[test]

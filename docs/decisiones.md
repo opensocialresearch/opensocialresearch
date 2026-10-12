@@ -6,6 +6,26 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-33.** Encabezados de todas las respuestas (SRV-09). Los siete
+  encabezados se ponen en una sola capa que envuelve a todas las demás,
+  también a la que valida el pedido y a la ruta de reserva, así llegan a los
+  200, 401, 403, 404 y 405, y llegarán a los 206, 410 y 416 de SRV-11 y
+  TRA-23 sin tocar nada. La capa reemplaza un encabezado con el mismo nombre
+  que ya traiga la respuesta, para que ninguna ruta pueda dejar otro valor.
+  El esquema de SRV-09.1 tiene como segundo paso «el audio de E02 está
+  eliminado según TRA-23», que no existe hasta TRA-23 y PRY-17, así que sus
+  ocho ejemplos quedan omitidos, y como comparten la etiqueta `@SRV-09.1` con
+  el escenario del `OPTIONS`, la corrida estricta de `@SRV-09` no puede
+  pasar. Siguiendo D-24, las barandas de SRV-09 se corrieron con `@SRV-09 and
+  not @SRV-09.1`, y el escenario del `OPTIONS` se corrió aparte en modo
+  estricto por su nombre, porque cucumber-rs no deja combinar `--tags` con
+  `--name`. Las pruebas unitarias comprueban los siete valores exactos en el
+  200, el 401, los dos 403, el 404 y el 405, en lugar de los ejemplos
+  omitidos. En los pasos, «la respuesta tiene estado» captura el 405 y se
+  definen «la respuesta tiene estos encabezados» y «la respuesta tiene el
+  encabezado». La marca [verificar] sobre los estilos en línea de la
+  interfaz compilada y SRV-09.2 quedan para la interfaz en Svelte.
+
 - **D-32.** Sin CORS (SRV-08). No hace falta código, porque el servidor no
   tiene ninguna capa de CORS, una verificación previa desde otro origen ya
   recibe el 403 de SRV-07 y un `OPTIONS` autenticado desde el origen propio

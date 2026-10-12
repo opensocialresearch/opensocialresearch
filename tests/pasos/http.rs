@@ -240,13 +240,40 @@ async fn se_manda(mundo: &mut Mundo) {
 
 // Solo los estados que el servidor ya produce. Los 206 y 416 llegan con
 // SRV-11, y sus escenarios quedan omitidos (D-20).
-#[then(regex = r"^la respuesta tiene estado (200|401|403|404)$")]
+#[then(regex = r"^la respuesta tiene estado (200|401|403|404|405)$")]
 fn estado_es(mundo: &mut Mundo, estado: u16) {
     let respuesta = mundo
         .respuesta
         .as_ref()
         .expect("falta «se manda el pedido»");
     assert_eq!(respuesta.estado, estado);
+}
+
+impl Mundo {
+    fn la_respuesta(&self) -> &Respuesta {
+        self.respuesta.as_ref().expect("falta «se manda el pedido»")
+    }
+}
+
+#[then("la respuesta tiene estos encabezados")]
+fn tiene_estos_encabezados(mundo: &mut Mundo, step: &cucumber::gherkin::Step) {
+    let tabla = step.table.as_ref().expect("falta la tabla de encabezados");
+    let respuesta = mundo.la_respuesta();
+    for fila in &tabla.rows[1..] {
+        let valor = mundo.resolver(&fila[1]);
+        assert_eq!(
+            respuesta.encabezado(&fila[0]),
+            Some(valor.as_str()),
+            "{}",
+            fila[0]
+        );
+    }
+}
+
+#[then(expr = "la respuesta tiene el encabezado {string}")]
+fn tiene_el_encabezado(mundo: &mut Mundo, nombre: String) {
+    let respuesta = mundo.la_respuesta();
+    assert!(respuesta.encabezado(&nombre).is_some(), "falta {nombre}");
 }
 
 #[then("el cuerpo de la respuesta es el JSON")]

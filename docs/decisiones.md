@@ -4,6 +4,24 @@ Registro de las decisiones del proyecto, de la más reciente a la más antigua.
 Cada cambio de alcance, de umbral, de herramienta o de especificación aprobada
 se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
+## 2026-10-12 · Decisiones metodológicas desde la literatura del ISA
+
+- **D-47.** Carlos fijó que todas las decisiones metodológicas, los pasos que
+  sigue la investigación y cómo la herramienta los registra, se basan en la
+  literatura de los cursos del programa ISA que se vaya usando. Queda como
+  regla para los agentes en [DESARROLLO.md](../DESARROLLO.md): cada una cita
+  su obra en APA, y si ninguna lectura la cubre se anota como pregunta en vez
+  de decidirla. Las especificaciones del tramo 1 ya traen decisiones de ese
+  tipo sin fuente del curso, que quedan para revisar contra la literatura
+  antes de darlas por cerradas. Son los cuatro tipos de entrada de la
+  bitácora (PRY-08), la convención de transcripción que la app no impone y
+  la reapertura de una transcripción revisada (D-05), los alcances del
+  consentimiento por defecto (D-07), que el consentimiento registrado
+  bloquee la importación (D-02), una persona y una entrevista por
+  participante (D-09) y los cuatro niveles de sensibilidad (D-15). Las
+  decisiones técnicas, como formatos, permisos o umbrales de las pruebas, no
+  entran en esta regla.
+
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
 - **D-46.** README editado a mano (PRY-16.5). Cada apertura reemplaza

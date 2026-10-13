@@ -125,6 +125,11 @@ corren también en la integración continua de GitHub, de modo que nada entra a
   sigue Conventional Commits en español y no menciona a la IA.
 - Lo que no está especificado no se implementa por iniciativa propia. Se anota
   como pregunta para el autor.
+- Toda decisión metodológica, es decir, qué pasos sigue la investigación y cómo
+  la herramienta los registra, se basa en la literatura de los cursos del
+  programa ISA de la UNED. La especificación cita la obra en que se apoya, con
+  su referencia en APA. Si ninguna lectura del curso la cubre, no se decide por
+  iniciativa propia, se anota como pregunta para el autor.
 
 ## Qué revisa el autor
 

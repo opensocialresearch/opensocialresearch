@@ -91,8 +91,9 @@ fn es_marca(valor: &toml::Value) -> bool {
 }
 
 /// Comprueba las claves obligatorias en el orden de la tabla de PRY-03, con
-/// la versión antes que las demás, porque otra versión puede tener otras.
-fn comprobar(tabla: &toml::Table) -> Result<(), Error> {
+/// la versión antes que las demás, porque otra versión puede tener otras, y
+/// devuelve el nombre.
+fn comprobar(tabla: &toml::Table) -> Result<String, Error> {
     if tabla.get("formato").and_then(toml::Value::as_str) != Some("osr-proyecto") {
         return Err(Error::Clave("formato"));
     }
@@ -104,17 +105,17 @@ fn comprobar(tabla: &toml::Table) -> Result<(), Error> {
         Some(version) => return Err(Error::Version(version)),
         None => return Err(Error::Clave("version_formato")),
     }
-    if !tabla.get("nombre").is_some_and(toml::Value::is_str) {
+    let Some(nombre) = tabla.get("nombre").and_then(toml::Value::as_str) else {
         return Err(Error::Clave("nombre"));
-    }
+    };
     if !tabla.get("creado").is_some_and(es_marca) {
         return Err(Error::Clave("creado"));
     }
-    Ok(())
+    Ok(nombre.to_string())
 }
 
-/// Valida el `proyecto.toml` de `raiz` sin escribir nada.
-pub fn validar(raiz: &Path) -> Result<(), Error> {
+/// Valida el `proyecto.toml` de `raiz` sin escribir nada y devuelve el nombre.
+pub fn validar(raiz: &Path) -> Result<String, Error> {
     let bytes = fs::read(raiz.join("proyecto.toml")).map_err(|error| match error.kind() {
         io::ErrorKind::NotFound => Error::Falta(raiz.to_path_buf()),
         _ => Error::Lectura(error),
@@ -131,7 +132,7 @@ mod pruebas {
     const BUENO: &str = "formato = \"osr-proyecto\"\nversion_formato = 1\nnombre = \"e\"\n\
                          creado = 2026-10-12T05:00:00-06:00\n";
 
-    fn validar_texto(texto: &str) -> Result<(), Error> {
+    fn validar_texto(texto: &str) -> Result<String, Error> {
         comprobar(&leer(texto.as_bytes())?)
     }
 

@@ -130,6 +130,56 @@ pub fn evento_bloqueo_abandonado(fecha: &str, pid: Option<u32>, inicio: Option<&
     evento(fecha, "bloqueo_abandonado", Abandonado { pid, inicio })
 }
 
+/// El detalle de `carpeta_recreada`, con la ruta de la carpeta (PRY-02).
+#[derive(Serialize)]
+struct Recreada<'a> {
+    ruta: &'a str,
+}
+
+/// La línea `carpeta_recreada` de una carpeta de «Al crear» que faltaba.
+pub fn evento_carpeta_recreada(fecha: &str, ruta: &str) -> String {
+    evento(fecha, "carpeta_recreada", Recreada { ruta })
+}
+
+/// El detalle de `linea_incompleta_descartada`, que da solo cuántos bytes se
+/// descartaron y no su contenido (D-43).
+#[derive(Serialize)]
+struct Descartada {
+    bytes: u64,
+}
+
+/// La línea `linea_incompleta_descartada` del registro reparado (PRY-08).
+pub fn evento_linea_incompleta(fecha: &str, bytes: u64) -> String {
+    evento(fecha, "linea_incompleta_descartada", Descartada { bytes })
+}
+
+/// El detalle de `indice_reconstruido`, con el motivo de PRY-10.
+#[derive(Serialize)]
+struct Reconstruido<'a> {
+    motivo: &'a str,
+}
+
+/// La línea `indice_reconstruido`, con motivo `ausente`, `danado` o `version`.
+pub fn evento_indice_reconstruido(fecha: &str, motivo: &str) -> String {
+    evento(fecha, "indice_reconstruido", Reconstruido { motivo })
+}
+
+/// El detalle de `readme_modificado_guardado`, con el nombre del archivo
+/// donde quedó la versión editada a mano (PRY-16).
+#[derive(Serialize)]
+struct ReadmeGuardado<'a> {
+    archivo: &'a str,
+}
+
+/// La línea `readme_modificado_guardado`.
+pub fn evento_readme_guardado(fecha: &str, archivo: &str) -> String {
+    evento(
+        fecha,
+        "readme_modificado_guardado",
+        ReadmeGuardado { archivo },
+    )
+}
+
 /// `.osr/bloqueo`, con el número del proceso y su inicio (PRY-05).
 pub fn bloqueo(pid: u32, inicio: &str) -> String {
     format!("pid = {pid}\ninicio = {inicio}\n")
@@ -297,6 +347,42 @@ mod pruebas {
         );
         assert!(
             evento_bloqueo_abandonado("f", None, None).contains("{\"pid\":null,\"inicio\":null}")
+        );
+    }
+
+    #[test]
+    fn evento_carpeta_recreada_tiene_la_ruta() {
+        assert_eq!(
+            evento_carpeta_recreada("2026-10-12T06:00:00-06:00", "bitacora/"),
+            "{\"fecha\":\"2026-10-12T06:00:00-06:00\",\"tipo\":\"carpeta_recreada\",\
+             \"detalle\":{\"ruta\":\"bitacora/\"}}\n"
+        );
+    }
+
+    #[test]
+    fn evento_linea_incompleta_da_solo_los_bytes() {
+        assert_eq!(
+            evento_linea_incompleta("2026-10-12T06:00:00-06:00", 9),
+            "{\"fecha\":\"2026-10-12T06:00:00-06:00\",\"tipo\":\"linea_incompleta_descartada\",\
+             \"detalle\":{\"bytes\":9}}\n"
+        );
+    }
+
+    #[test]
+    fn evento_indice_reconstruido_tiene_el_motivo() {
+        assert_eq!(
+            evento_indice_reconstruido("2026-10-12T06:00:00-06:00", "danado"),
+            "{\"fecha\":\"2026-10-12T06:00:00-06:00\",\"tipo\":\"indice_reconstruido\",\
+             \"detalle\":{\"motivo\":\"danado\"}}\n"
+        );
+    }
+
+    #[test]
+    fn evento_readme_guardado_tiene_el_archivo() {
+        assert_eq!(
+            evento_readme_guardado("2026-10-12T06:00:00-06:00", "README.modificado-x.md"),
+            "{\"fecha\":\"2026-10-12T06:00:00-06:00\",\"tipo\":\"readme_modificado_guardado\",\
+             \"detalle\":{\"archivo\":\"README.modificado-x.md\"}}\n"
         );
     }
 

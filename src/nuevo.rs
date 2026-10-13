@@ -28,6 +28,11 @@ impl Momento {
             fecha: ahora.strftime("%Y-%m-%d").to_string(),
         }
     }
+
+    /// La marca compacta `AAAAMMDDTHHMMSS` en hora local de PRY-02.
+    pub fn compacta(&self) -> String {
+        self.marca[..19].replace(['-', ':'], "")
+    }
 }
 
 /// Errores de `osr nuevo`, con el código de salida de la tabla de PRY-01.
@@ -135,7 +140,7 @@ fn carpeta_padre(ruta: &Path) -> &Path {
 }
 
 /// Crea una carpeta con permisos 0700 sin importar la umask (SRV-13).
-fn carpeta(ruta: &Path) -> io::Result<()> {
+pub fn carpeta(ruta: &Path) -> io::Result<()> {
     fs::create_dir(ruta)?;
     fs::set_permissions(ruta, fs::Permissions::from_mode(0o700))
 }
@@ -143,16 +148,6 @@ fn carpeta(ruta: &Path) -> io::Result<()> {
 /// Escribe un archivo gestionado con permisos 0600 sin importar la umask.
 pub fn archivo(ruta: &Path, contenido: &str) -> io::Result<()> {
     fs::write(ruta, contenido)?;
-    fs::set_permissions(ruta, fs::Permissions::from_mode(0o600))
-}
-
-/// Crea el índice como una base SQLite vacía con su versión de esquema.
-fn indice(ruta: &Path) -> io::Result<()> {
-    let conexion = rusqlite::Connection::open(ruta).map_err(io::Error::other)?;
-    conexion
-        .pragma_update(None, "user_version", 1)
-        .map_err(io::Error::other)?;
-    drop(conexion);
     fs::set_permissions(ruta, fs::Permissions::from_mode(0o600))
 }
 
@@ -191,7 +186,7 @@ fn armar(raiz: &Path, nombre: &str, momento: &Momento) -> io::Result<()> {
     carpeta(&raiz.join("identificable/consentimientos"))?;
     carpeta(&raiz.join("identificable/entrevistas"))?;
     carpeta(&raiz.join(".osr"))?;
-    indice(&raiz.join(".osr/indice.sqlite"))?;
+    crate::indice::construir(raiz)?;
     archivo(
         &raiz.join(".osr/bloqueo"),
         &plantillas::bloqueo(std::process::id(), &momento.marca),
@@ -239,6 +234,11 @@ mod pruebas {
         assert!(matches!(marca[19], b'+' | b'-'));
         assert_eq!(marca[22], b':');
         jiff::Timestamp::strptime("%Y-%m-%dT%H:%M:%S%:z", &momento.marca).unwrap();
+    }
+
+    #[test]
+    fn la_marca_compacta_no_tiene_separadores_ni_desplazamiento() {
+        assert_eq!(momento().compacta(), "20261011T213005");
     }
 
     #[test]
@@ -328,15 +328,11 @@ mod pruebas {
     }
 
     #[test]
-    fn el_indice_es_una_base_sqlite_con_version_1() {
+    fn el_indice_nuevo_se_puede_usar_sin_reconstruir() {
         let tmp = tempfile::tempdir().unwrap();
         let raiz = tmp.path().join("estudio");
         crear(&raiz, None, &momento()).unwrap();
-        let conexion = rusqlite::Connection::open(raiz.join(".osr/indice.sqlite")).unwrap();
-        let version: i64 = conexion
-            .pragma_query_value(None, "user_version", |fila| fila.get(0))
-            .unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(crate::indice::revisar(&raiz), None);
     }
 
     #[test]

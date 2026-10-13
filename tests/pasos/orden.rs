@@ -194,6 +194,7 @@ fn se_ejecuta(mundo: &mut Mundo, orden: String) {
     mundo.lanzar(&orden);
 }
 
+#[given("osr se cierra de forma ordenada")]
 #[when("osr se cierra de forma ordenada")]
 fn se_cierra(mundo: &mut Mundo) {
     let osr = mundo.osr.as_mut().expect("falta «se ejecuta»");

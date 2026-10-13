@@ -124,6 +124,17 @@ fn existe_carpeta_vacia(mundo: &mut Mundo, carpeta: String) {
     assert!(esta_vacia(&carpeta), "{} no está vacía", carpeta.display());
 }
 
+#[then(expr = "existe la carpeta vacía {string}")]
+fn hay_carpeta_vacia(mundo: &mut Mundo, carpeta: String) {
+    let carpeta = mundo.ruta(&carpeta);
+    assert!(
+        carpeta.is_dir(),
+        "no existe la carpeta {}",
+        carpeta.display()
+    );
+    assert!(esta_vacia(&carpeta), "{} no está vacía", carpeta.display());
+}
+
 /// Deja la ruta sin existir y la anota para borrarla al final del escenario,
 /// porque el escenario la va a crear.
 #[given(expr = "no existe {string}")]
@@ -266,6 +277,42 @@ fn una_linea_nueva(mundo: &mut Mundo, tipo: String) {
     assert_eq!(de_ese_tipo, 1, "{nuevas:?}");
 }
 
+// Solo un texto en el detalle; las formas con varios valores, como
+// `"E01", "ogg" y la huella de "E01.ogg"`, llegan con sus requisitos (D-20).
+#[then(
+    regex = r#"^el registro de eventos tiene exactamente una línea nueva de tipo "([a-z_]+)" cuyo detalle contiene "([^"]+)"$"#
+)]
+fn una_linea_nueva_con(mundo: &mut Mundo, tipo: String, texto: String) {
+    let nuevas = eventos(mundo).split_off(mundo.lineas_de_eventos);
+    let de_ese_tipo: Vec<_> = nuevas
+        .iter()
+        .filter(|e| e["tipo"] == tipo.as_str())
+        .collect();
+    assert_eq!(de_ese_tipo.len(), 1, "{nuevas:?}");
+    let detalle = de_ese_tipo[0]["detalle"].to_string();
+    assert!(detalle.contains(&texto), "{detalle} no contiene {texto:?}");
+}
+
+#[then(expr = "la primera línea nueva del registro de eventos es de tipo {string}")]
+fn primera_linea_nueva(mundo: &mut Mundo, tipo: String) {
+    let nuevas = eventos(mundo).split_off(mundo.lineas_de_eventos);
+    let primera = nuevas
+        .first()
+        .expect("el registro no recibió líneas nuevas");
+    assert_eq!(primera["tipo"], tipo.as_str(), "{nuevas:?}");
+}
+
+#[then("cada línea del registro de eventos es JSON válido")]
+fn cada_linea_es_json(mundo: &mut Mundo) {
+    let texto =
+        fs::read_to_string(mundo.ruta("bitacora/registro.jsonl")).expect("leer el registro");
+    assert!(texto.ends_with('\n'), "la última línea no termina en salto");
+    for linea in texto.lines() {
+        let evento: Result<serde_json::Value, _> = serde_json::from_str(linea);
+        assert!(evento.is_ok_and(|e| e.is_object()), "{linea:?} no es JSON");
+    }
+}
+
 #[then("el registro de eventos no recibió líneas nuevas")]
 fn sin_eventos_nuevos(mundo: &mut Mundo) {
     let nuevas = eventos(mundo).split_off(mundo.lineas_de_eventos);
@@ -405,6 +452,80 @@ fn reemplaza_linea(mundo: &mut Mundo, numero: usize, texto: String) {
 fn borra_archivo(mundo: &mut Mundo, archivo: String) {
     let ruta = mundo.ruta(&archivo);
     fs::remove_file(&ruta).unwrap_or_else(|e| panic!("borrar {}: {e}", ruta.display()));
+}
+
+#[given(regex = r#"^con la app cerrada se borra la carpeta "([^"]+/)" con todo su contenido$"#)]
+fn borra_carpeta(mundo: &mut Mundo, carpeta: String) {
+    let ruta = mundo.ruta(&carpeta);
+    fs::remove_dir_all(&ruta).unwrap_or_else(|e| panic!("borrar {}: {e}", ruta.display()));
+}
+
+#[given(
+    regex = r#"^con la app cerrada se agrega al final de "([^"]+)" el texto "(.*)" sin salto de línea$"#
+)]
+fn agrega_texto(mundo: &mut Mundo, archivo: String, texto: String) {
+    let ruta = mundo.ruta(&archivo);
+    let mut archivo = fs::OpenOptions::new()
+        .append(true)
+        .open(&ruta)
+        .unwrap_or_else(|e| panic!("abrir {}: {e}", ruta.display()));
+    std::io::Write::write_all(&mut archivo, texto.as_bytes()).expect("agregar el texto");
+}
+
+#[then(regex = r#"^el archivo "([^"]+)" no contiene una línea que sea exactamente "(.*)"$"#)]
+fn sin_esa_linea(mundo: &mut Mundo, archivo: String, linea: String) {
+    let texto = fs::read_to_string(mundo.ruta(&archivo)).expect("leer el archivo");
+    assert!(
+        !texto.lines().any(|otra| otra == linea),
+        "{archivo} tiene la línea {linea:?}"
+    );
+}
+
+#[given(regex = r#"^se reemplaza "(\.osr/indice\.sqlite)" por (\d+) bytes aleatorios$"#)]
+fn reemplaza_por_azar(mundo: &mut Mundo, archivo: String, cantidad: usize) {
+    let mut bytes = vec![0u8; cantidad];
+    std::io::Read::read_exact(
+        &mut fs::File::open("/dev/urandom").expect("abrir /dev/urandom"),
+        &mut bytes,
+    )
+    .expect("leer bytes al azar");
+    fs::write(mundo.ruta(&archivo), bytes).expect("escribir los bytes");
+}
+
+#[given(regex = r#"^con la app cerrada se agrega al final de "([^"]+)" la línea "(.*)"$"#)]
+fn agrega_linea(mundo: &mut Mundo, archivo: String, linea: String) {
+    agrega_texto(mundo, archivo, format!("{linea}\n"));
+}
+
+#[given(regex = r#"^se guardó una copia de "([^"]+)" como versión editada$"#)]
+fn guarda_version_editada(mundo: &mut Mundo, archivo: String) {
+    let bytes = fs::read(mundo.ruta(&archivo)).expect("leer el archivo");
+    mundo.version_editada = Some(bytes);
+}
+
+#[then(regex = r#"^el archivo "([^"]+)" es idéntico byte a byte a la versión editada$"#)]
+fn igual_a_la_editada(mundo: &mut Mundo, archivo: String) {
+    let editada = mundo
+        .version_editada
+        .as_ref()
+        .expect("falta guardar la versión editada");
+    let actual = fs::read(mundo.ruta(&archivo)).expect("leer el archivo");
+    assert!(
+        &actual == editada,
+        "{archivo} no es igual a la versión editada"
+    );
+}
+
+#[then(regex = r#"^el archivo "([^"]+)" no contiene el texto "(.*)"$"#)]
+fn sin_el_texto(mundo: &mut Mundo, archivo: String, texto: String) {
+    let contenido = fs::read_to_string(mundo.ruta(&archivo)).expect("leer el archivo");
+    assert!(!contenido.contains(&texto), "{archivo} contiene {texto:?}");
+}
+
+#[then(regex = r#"^la primera línea de "([^"]+)" es "(.*)"$"#)]
+fn primera_linea(mundo: &mut Mundo, archivo: String, linea: String) {
+    let contenido = fs::read_to_string(mundo.ruta(&archivo)).expect("leer el archivo");
+    assert_eq!(contenido.lines().next(), Some(linea.as_str()));
 }
 
 #[given("no hay ninguna preparación adicional")]

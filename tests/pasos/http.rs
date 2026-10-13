@@ -373,6 +373,7 @@ fn cookie_sin_vencimiento(mundo: &mut Mundo, nombre: String, uno: String, dos: S
     }
 }
 
+#[given("se guarda el estado que muestra la app")]
 #[when("se guarda el estado que muestra la app")]
 async fn guarda_el_estado(mundo: &mut Mundo) {
     mundo.estado_guardado = Some(interfaz(mundo).await);

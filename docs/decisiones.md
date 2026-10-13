@@ -6,6 +6,55 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-46.** README editado a mano (PRY-16.5). Cada apertura reemplaza
+  `README.md` después de anotar la verificación, como en el orden de PRY-04.
+  Antes mira si el que hay es el de la app: su huella es la que guarda el
+  índice o, si el índice no la tiene, sus bytes son los de la plantilla con
+  el nombre de `proyecto.toml` y la fecha que dice el propio archivo. Si no es
+  ninguna de las dos, lo copia tal cual a `README.modificado-<marca>.md` y
+  anota `readme_modificado_guardado` con `detalle.archivo`. La reconstrucción
+  del índice no anota `README.md`, porque no puede saber si el del disco es
+  el de la app, y anotarlo haría pasar por propio un README editado mientras
+  faltaba el índice; su fila la pone la regeneración. Con esto el README de
+  los datos de prueba tiene que ser byte a byte el de la plantilla, y una
+  prueba unitaria lo vigila. El contenido sigue siendo la plantilla del
+  proyecto vacío hasta PRY-16.1 y PRY-16.2, que agregan las filas de lo que
+  esté presente. Llega también la escritura atómica de PRY-12
+  (`src/escritura.rs`, temporal `.<nombre>.osr-tmp-<8>` en la misma carpeta,
+  a disco, renombrar y la carpeta a disco), que usa por primera vez el
+  README. Borrar los temporales que deje un corte es el paso 1 de PRY-11 y
+  llega con él. Si dos aperturas en el mismo segundo encuentran el README
+  editado las dos veces, la segunda pisa la primera copia; se acepta porque
+  la marca tiene precisión de segundos por especificación. `{marca}` en las
+  rutas de los escenarios se resuelve al único archivo de la carpeta que
+  tiene ahí una marca compacta.
+
+- **D-45.** Índice reconstruible (PRY-10). `src/indice.rs` revisa al abrir
+  `.osr/indice.sqlite` y lo reconstruye si falta (`ausente`), si SQLite no lo
+  puede leer o le falta la tabla `archivos` (`danado`), o si su
+  `user_version` no es la que espera `osr` (`version`), y anota
+  `indice_reconstruido` con `detalle.motivo`. La línea va después de las
+  carpetas recreadas y antes del bloqueo abandonado. El esquema pasa a la
+  versión 2, así los proyectos creados antes, con la base vacía de la
+  versión 1, se reconstruyen solos. La reconstrucción va en una sola
+  transacción, también `user_version`, de modo que un corte a mitad deja la
+  versión 0 y la próxima apertura la rehace. Se agrega `sha2` 0.11 para la
+  huella SHA-256, que D-19 no traía. La tabla `archivos` guarda ruta, bytes,
+  fecha de modificación en nanosegundos y huella, y por ahora solo de los
+  siete archivos de texto de «Al crear» que la app reescribe enteros. El
+  registro de eventos queda fuera porque solo crece al final y lo cuida
+  PRY-08. Los archivos de PAR y TRA, y las copias de participantes,
+  consentimientos y entrevistas, entran con sus requisitos. Si falta `.osr/`,
+  `osr abrir` la crea con 0700 antes de tomar el bloqueo: sin ella no puede
+  haber bloqueo de otro proceso, así que crearla no pisa a nadie. No se anota
+  `carpeta_recreada` para ella, porque ya lo dice `indice_reconstruido` con
+  motivo `ausente`, y la prueba unitaria que esperaba el código 6 pasa a
+  esperar la reconstrucción. «El mismo estado» de PRY-10.2 compara hoy la
+  pantalla sin proyecto, que es todo lo que muestra `osr abrir` (D-40), y se
+  vuelve exigente a medida que el resumen muestre datos del índice. Los
+  pasos «se guarda el estado que muestra la app» y «osr se cierra de forma
+  ordenada» valen ahora también como «Dado», que es como los usa PRY-10.2.
+
 - **D-44.** Órdenes de respaldo del README (PRY-16.3). La plantilla del
   README ya traía las dos órdenes, así que el cambio son solo los pasos. Una
   «orden» de una sección es una línea de un bloque de código, sangrado con
@@ -13,6 +62,31 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
   `--exclude X` (o `--exclude=X`, con o sin comillas simples) junto a otra
   que no excluye nada. El analizador de secciones queda en
   `tests/pasos/readme.rs` para PRY-16.1 y PRY-16.2.
+
+- **D-43.** Última línea incompleta del registro (PRY-08.3). Al abrir, si
+  `bitacora/registro.jsonl` no termina en salto de línea, se recorta hasta
+  después del último salto (o a cero bytes si no hay ninguno) y se lleva a
+  disco antes de agregar cualquier línea nueva, porque una línea agregada
+  quedaría pegada a la incompleta. El evento `linea_incompleta_descartada`
+  lleva en `detalle` solo `bytes`, la cantidad descartada, y no el texto,
+  que podría ser cualquier cosa. Las líneas nuevas de una apertura quedan en
+  este orden, `linea_incompleta_descartada`, `carpeta_recreada`,
+  `bloqueo_abandonado` y `verificacion`, todas después de tomar el bloqueo,
+  así un segundo `osr` (PRY-05.1) o un `proyecto.toml` inválido (PRY-03.2) no
+  escriben nada. Pregunta para el autor: si falta `bitacora/registro.jsonl`,
+  hoy el proyecto no abre (código 6, como antes de este cambio). ¿Debería
+  crearse vacío y anotar algo, o es mejor que no abra?
+
+- **D-42.** Carpetas de «Al crear» que faltan (PRY-02.2). Al abrir se
+  vuelven a crear vacías, con 0700, `bitacora/`, `participantes/`,
+  `identificable/`, `identificable/consentimientos/` e
+  `identificable/entrevistas/`, cada una con su `carpeta_recreada` y la ruta
+  con `/` final en `detalle.ruta`, como en la tabla de PRY-02. `.osr/` queda
+  fuera de este cambio: sin ella no se puede tomar el bloqueo, y quien la
+  rehace es la reconstrucción del índice (PRY-10, motivo `ausente`). Hasta
+  entonces, abrir un proyecto sin `.osr/` sigue terminando con código 6. Una
+  ruta de esas que existe pero es un archivo no se toca, y si una carpeta de
+  la lista quedaría dentro de ese archivo, el proyecto no abre (código 6).
 
 - **D-41.** Tema claro por defecto. Carlos pidió trabajar con el tema claro
   por defecto. La interfaz no sigue `prefers-color-scheme` del sistema, como

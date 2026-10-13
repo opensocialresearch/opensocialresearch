@@ -90,6 +90,8 @@ pub struct Mundo {
     xdg_state_home: Option<PathBuf>,
     /// La umask con la que se lanza `osr`, en octal, si el escenario la fija.
     umask: Option<String>,
+    /// Los bytes que guardó «se guardó una copia de … como versión editada».
+    version_editada: Option<Vec<u8>>,
 }
 
 impl Mundo {
@@ -127,6 +129,7 @@ impl Mundo {
             lineas_del_registro: 0,
             xdg_state_home: None,
             umask: None,
+            version_editada: None,
         }
     }
 
@@ -211,11 +214,48 @@ impl Mundo {
         } else {
             self.proyecto.join(ruta)
         };
+        let ruta = con_marca(ruta);
         match &self.disco {
             Some(disco) => Path::new(&format!("/proc/{}/root", disco.id()))
                 .join(ruta.strip_prefix("/").expect("ruta absoluta")),
             None => ruta,
         }
+    }
+}
+
+/// Si el nombre del archivo tiene `{marca}`, la ruta del único archivo de su
+/// carpeta que tiene ahí una marca compacta `AAAAMMDDTHHMMSS` generada por la
+/// app. Si no hay exactamente uno, la ruta queda con `{marca}` y el paso que
+/// la usa falla al no encontrarla.
+fn con_marca(ruta: PathBuf) -> PathBuf {
+    let Some(nombre) = ruta.file_name().and_then(|n| n.to_str()) else {
+        return ruta;
+    };
+    let Some((antes, despues)) = nombre.split_once("{marca}") else {
+        return ruta;
+    };
+    let es_marca = |marca: &str| {
+        let bytes = marca.as_bytes();
+        bytes.len() == 15
+            && bytes[8] == b'T'
+            && bytes
+                .iter()
+                .enumerate()
+                .all(|(i, b)| i == 8 || b.is_ascii_digit())
+    };
+    let carpeta = ruta.parent().unwrap_or(Path::new("."));
+    let candidatos: Vec<PathBuf> = fs::read_dir(carpeta)
+        .into_iter()
+        .flatten()
+        .filter_map(|entrada| {
+            let otro = entrada.ok()?.file_name().into_string().ok()?;
+            let marca = otro.strip_prefix(antes)?.strip_suffix(despues)?;
+            es_marca(marca).then(|| carpeta.join(&otro))
+        })
+        .collect();
+    match <[PathBuf; 1]>::try_from(candidatos) {
+        Ok([unica]) => unica,
+        Err(_) => ruta,
     }
 }
 

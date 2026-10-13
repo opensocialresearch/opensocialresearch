@@ -1,6 +1,9 @@
 //! `osr`, el programa de Open Social Research.
 
+mod abierto;
 mod abrir;
+mod api;
+mod aplicacion;
 mod arranque;
 mod audio;
 mod bloqueo;
@@ -17,6 +20,7 @@ mod readme;
 mod recursos;
 mod registro;
 mod reparar;
+mod resumen;
 mod rutas;
 mod servidor;
 mod token;

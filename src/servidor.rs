@@ -11,11 +11,15 @@ use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{MethodFilter, MethodRouter, on};
 
+use crate::abierto::{Abierto, Compartido};
+use crate::api::{self, Falla};
+use crate::nuevo::Momento;
 use crate::rutas::RUTAS;
-use crate::{audio, recursos, registro, token};
+use crate::{aplicacion, audio, recursos, registro, resumen, token};
 
-/// La pantalla sin proyecto, con `Abrir proyecto` y `Crear proyecto`.
-const INICIO: &str = include_str!("paginas/inicio.html");
+/// La bienvenida del primer uso, con la vista «Primera investigación»
+/// (PRY-23).
+const BIENVENIDA: &str = include_str!("paginas/bienvenida.html");
 
 /// La página del 401 fuera de `/api/` (SRV-05).
 const NO_AUTORIZADO: &str = include_str!("paginas/no_autorizado.html");
@@ -65,8 +69,12 @@ struct Sesion {
     /// Dónde se anota cada pedido rechazado, el registro técnico salvo en
     /// las pruebas unitarias, que no escriben en la carpeta de estado.
     anotar: fn(&str, &str),
-    /// La carpeta del proyecto abierto, si hay uno.
-    proyecto: Option<Arc<Path>>,
+    /// El proyecto abierto, si hay uno, que puede abrirse durante la sesión
+    /// desde la pantalla de inicio (PRY-21).
+    abierto: Compartido,
+    /// La carpeta personal, donde está la carpeta de la aplicación
+    /// (PRY-24); fuera de las pruebas unitarias, el `HOME` del proceso.
+    casa: Option<PathBuf>,
 }
 
 /// Un Host propio es `127.0.0.1:P`, `[::1]:P` o `localhost:P`, sin
@@ -234,33 +242,89 @@ async fn vigilar(State(sesion): State<Sesion>, pedido: Request, siguiente: Next)
     respuesta
 }
 
-async fn inicio() -> Html<&'static str> {
-    Html(INICIO)
+/// Las investigaciones de la carpeta de la aplicación de `casa`.
+fn investigaciones(casa: Option<&Path>) -> Vec<aplicacion::Investigacion> {
+    aplicacion::carpeta_desde(casa.map(Path::as_os_str))
+        .map(|carpeta| aplicacion::investigaciones(&carpeta))
+        .unwrap_or_default()
 }
 
-/// El audio de una entrevista del proyecto abierto, con el `Range` del
-/// pedido (SRV-11).
-fn audio(proyecto: Option<Arc<Path>>, filtro: MethodFilter) -> MethodRouter {
+/// La página `/`: el resumen del proyecto abierto (PRY-22) o, sin proyecto,
+/// la lista de investigaciones (PRY-20), o la bienvenida si no hay ninguna
+/// (PRY-23).
+fn inicio(abierto: Compartido, casa: Option<PathBuf>, filtro: MethodFilter) -> MethodRouter {
+    on(filtro, move || async move {
+        if let Some(abierto) = abierto.actual() {
+            return Html(resumen::pagina(&abierto));
+        }
+        let lista = investigaciones(casa.as_deref());
+        if lista.is_empty() {
+            Html(BIENVENIDA.to_string())
+        } else {
+            Html(resumen::inicio(&lista))
+        }
+    })
+}
+
+/// El audio de una entrevista del proyecto abierto en el momento del
+/// pedido, con el `Range` del pedido (SRV-11).
+fn audio(abierto: Compartido, filtro: MethodFilter) -> MethodRouter {
     on(
         filtro,
         move |extract::Path(entrevista): extract::Path<String>, encabezados: HeaderMap| async move {
             let rango = encabezados
                 .get(header::RANGE)
                 .and_then(|valor| valor.to_str().ok());
-            audio::servir(proyecto.as_deref(), &entrevista, rango).await
+            let carpeta = abierto.actual().map(|abierto| abierto.carpeta);
+            audio::servir(carpeta.as_deref(), &entrevista, rango).await
         },
     )
+}
+
+/// Una acción de crear o de abrir (PRY-19, PRY-20). Corre aparte, porque es
+/// escritura en el disco con el candado tomado, y responde JSON.
+type Accion = fn(&Compartido, &[u8], Option<&std::ffi::OsStr>, &Momento) -> Result<Abierto, Falla>;
+
+fn accion(
+    abierto: Compartido,
+    casa: Option<PathBuf>,
+    filtro: MethodFilter,
+    hacer: Accion,
+) -> MethodRouter {
+    on(filtro, move |cuerpo: axum::body::Bytes| async move {
+        let resultado = tokio::task::spawn_blocking(move || {
+            let casa = casa.as_deref().map(Path::as_os_str);
+            hacer(&abierto, &cuerpo, casa, &Momento::ahora())
+        })
+        .await
+        .expect("la acción no termina en pánico");
+        let (estado, cuerpo) = api::respuesta(&resultado);
+        let tipo = [(header::CONTENT_TYPE, "application/json")];
+        (estado, tipo, cuerpo).into_response()
+    })
 }
 
 /// El manejador de un camino de `RUTAS` para un método.
 fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter {
     match camino {
-        "/" => on(filtro, inicio),
+        "/" => inicio(sesion.abierto.clone(), sesion.casa.clone(), filtro),
         "/recursos/{*camino}" => on(
             filtro,
             |extract::Path(camino): extract::Path<String>| async move { recursos::servir(&camino) },
         ),
-        "/audio/{entrevista}" => audio(sesion.proyecto.clone(), filtro),
+        "/audio/{entrevista}" => audio(sesion.abierto.clone(), filtro),
+        "/api/proyecto/crear" => accion(
+            sesion.abierto.clone(),
+            sesion.casa.clone(),
+            filtro,
+            api::crear,
+        ),
+        "/api/proyecto/abrir" => accion(
+            sesion.abierto.clone(),
+            sesion.casa.clone(),
+            filtro,
+            api::abrir,
+        ),
         otro => panic!("la ruta {otro} de RUTAS no tiene manejador"),
     }
 }
@@ -269,12 +333,13 @@ fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter 
 /// `RUTAS`. La capa que valida el pedido va al final, así cubre también las
 /// rutas inexistentes, que con token dan 404, y la de los encabezados de
 /// SRV-09 la envuelve, así llegan también a los 401, 403, 404 y 405.
-pub fn rutas(token: Arc<str>, puerto: u16, proyecto: Option<PathBuf>) -> Router {
+pub fn rutas(token: Arc<str>, puerto: u16, abierto: Compartido) -> Router {
     rutas_con(Sesion {
         token,
         puerto,
         anotar: registro::anotar,
-        proyecto: proyecto.map(Arc::from),
+        abierto,
+        casa: std::env::var_os("HOME").map(PathBuf::from),
     })
 }
 
@@ -296,6 +361,7 @@ fn rutas_con(sesion: Sesion) -> Router {
 mod pruebas {
     use super::*;
     use axum::body::Body;
+    use std::path::{Path, PathBuf};
     use tower::ServiceExt;
 
     const TOKEN: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ";
@@ -317,12 +383,46 @@ mod pruebas {
     }
 
     fn servidor_con(proyecto: Option<PathBuf>) -> Router {
+        servidor_compartido(Compartido::con(proyecto.map(|carpeta| Abierto {
+            carpeta,
+            nombre: "Proyecto de prueba inventado".into(),
+        })))
+    }
+
+    /// Una carpeta personal con una investigación en la carpeta de la
+    /// aplicación, así sin proyecto se ve la lista y no la bienvenida.
+    fn casa_con_una_investigacion() -> tempfile::TempDir {
+        let casa = tempfile::tempdir().unwrap();
+        let previa = casa.path().join("Open Social Research/previa");
+        std::fs::create_dir_all(&previa).unwrap();
+        std::fs::write(
+            previa.join("proyecto.toml"),
+            "formato = \"osr-proyecto\"\nversion_formato = 1\nnombre = \"Previa\"\n\
+             creado = 2026-10-12T05:00:00-06:00\n",
+        )
+        .unwrap();
+        casa
+    }
+
+    thread_local! {
+        /// La carpeta personal de las pruebas de este hilo, que vive lo que
+        /// vive el hilo.
+        static CASA: tempfile::TempDir = casa_con_una_investigacion();
+    }
+
+    fn servidor_en(abierto: Compartido, casa: Option<PathBuf>) -> Router {
         rutas_con(Sesion {
             token: Arc::from(TOKEN),
             puerto: PUERTO,
             anotar: anotar_en_memoria,
-            proyecto: proyecto.map(Arc::from),
+            abierto,
+            casa,
         })
+    }
+
+    fn servidor_compartido(abierto: Compartido) -> Router {
+        let casa = CASA.with(|casa| casa.path().to_path_buf());
+        servidor_en(abierto, Some(casa))
     }
 
     fn servidor() -> Router {
@@ -354,7 +454,7 @@ mod pruebas {
 
     #[tokio::test]
     async fn la_entrada_con_el_token_responde_la_pantalla_de_inicio() {
-        let respuesta = servidor()
+        let respuesta = servidor_con(None)
             .oneshot(
                 get(&format!("/?token={TOKEN}"))
                     .body(Body::empty())
@@ -367,8 +467,124 @@ mod pruebas {
             .await
             .unwrap();
         let cuerpo = String::from_utf8(cuerpo.to_vec()).unwrap();
-        assert!(cuerpo.contains("Abrir proyecto"));
-        assert!(cuerpo.contains("Crear proyecto"));
+        assert!(cuerpo.contains("Investigaciones"));
+        assert!(cuerpo.contains("Previa"));
+        assert!(cuerpo.contains("Crear investigación"));
+    }
+
+    async fn cuerpo_de(respuesta: Response) -> String {
+        let bytes = axum::body::to_bytes(respuesta.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        String::from_utf8(bytes.to_vec()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn con_un_proyecto_abierto_la_entrada_es_su_resumen() {
+        let respuesta = servidor()
+            .oneshot(
+                get(&format!("/?token={TOKEN}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(respuesta.status(), StatusCode::OK);
+        let cuerpo = cuerpo_de(respuesta).await;
+        assert!(cuerpo.contains("Proyecto de prueba inventado · Open Social Research"));
+        assert!(!cuerpo.contains("Sin proyecto abierto"));
+    }
+
+    /// Un POST de la pestaña a la API, con el token, el Origin propio y JSON.
+    fn post(camino: &str, cuerpo: serde_json::Value) -> Request {
+        get(camino)
+            .method("POST")
+            .header("Authorization", format!("Bearer {TOKEN}"))
+            .header("Origin", format!("http://127.0.0.1:{PUERTO}"))
+            .header("Content-Type", "application/json")
+            .body(Body::from(cuerpo.to_string()))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn crear_desde_la_pantalla_abre_el_proyecto_y_la_pagina_pasa_al_resumen() {
+        let casa = tempfile::tempdir().unwrap();
+        let carpeta = casa.path().join("Open Social Research/estudio-de-prueba");
+        let abierto = Compartido::default();
+        let router = servidor_en(abierto.clone(), Some(casa.path().to_path_buf()));
+        let pagina = con_token(router.clone(), get("/")).await;
+        assert!(
+            cuerpo_de(pagina).await.contains("Iniciar"),
+            "sin investigaciones"
+        );
+        let pedido = post(
+            "/api/proyecto/crear",
+            serde_json::json!({"nombre": "Estudio de prueba"}),
+        );
+        let respuesta = router.clone().oneshot(pedido).await.unwrap();
+        assert_eq!(respuesta.status(), StatusCode::OK);
+        assert_eq!(
+            encabezado(&respuesta, header::CONTENT_TYPE),
+            "application/json"
+        );
+        tiene_los_siete(&respuesta);
+        let esperado = serde_json::json!({"nombre": "Estudio de prueba", "carpeta": carpeta});
+        let cuerpo: serde_json::Value = serde_json::from_str(&cuerpo_de(respuesta).await).unwrap();
+        assert_eq!(cuerpo, esperado);
+        assert_eq!(abierto.actual().unwrap().carpeta, carpeta);
+        assert!(carpeta.join(".osr/bloqueo").is_file());
+        let pagina = con_token(router.clone(), get("/")).await;
+        assert!(cuerpo_de(pagina).await.contains("Proyecto nuevo"));
+        let otra = post(
+            "/api/proyecto/abrir",
+            serde_json::json!({"carpeta": "estudio-de-prueba"}),
+        );
+        let respuesta = router.oneshot(otra).await.unwrap();
+        assert_eq!(respuesta.status(), StatusCode::CONFLICT);
+        assert!(cuerpo_de(respuesta).await.contains("proyecto_ya_abierto"));
+        let lista = con_token(
+            servidor_en(Compartido::default(), Some(casa.path().to_path_buf())),
+            get("/"),
+        )
+        .await;
+        let lista = cuerpo_de(lista).await;
+        assert!(lista.contains("estudio-de-prueba") && lista.contains("Investigaciones"));
+    }
+
+    #[tokio::test]
+    async fn sin_carpeta_personal_sin_proyecto_es_la_bienvenida() {
+        let pagina = con_token(servidor_en(Compartido::default(), None), get("/")).await;
+        assert!(cuerpo_de(pagina).await.contains("Iniciar"));
+    }
+
+    #[tokio::test]
+    async fn un_error_de_la_api_responde_su_estado_y_su_json() {
+        let respuesta = servidor_con(None)
+            .oneshot(post(
+                "/api/proyecto/crear",
+                serde_json::json!({"nombre": " "}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(respuesta.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            cuerpo_de(respuesta).await,
+            r#"{"error":"nombre_vacio","mensaje":"Hay que escribir el nombre de la investigación."}"#
+        );
+    }
+
+    #[tokio::test]
+    async fn el_audio_sigue_al_proyecto_abierto_durante_la_sesion() {
+        let abierto = Compartido::default();
+        let router = servidor_compartido(abierto.clone());
+        let respuesta = con_token(router.clone(), get("/audio/E01")).await;
+        assert_eq!(respuesta.status(), StatusCode::NOT_FOUND);
+        *abierto.tomar() = Some(Abierto {
+            carpeta: datos(),
+            nombre: "Proyecto de prueba inventado".into(),
+        });
+        let respuesta = con_token(router, get("/audio/E01").method("HEAD")).await;
+        assert_eq!(respuesta.status(), StatusCode::OK);
     }
 
     #[tokio::test]
@@ -859,7 +1075,8 @@ mod pruebas {
             token: Arc::from(TOKEN),
             puerto: PUERTO,
             anotar: anotar_en_memoria,
-            proyecto: None,
+            abierto: Compartido::default(),
+            casa: None,
         };
         let _ = atender("/sin-manejador", MethodFilter::GET, &sesion);
     }

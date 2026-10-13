@@ -459,27 +459,60 @@ fn es_pagina_con(respuesta: &Respuesta, texto: &str, camino: &str) {
     );
 }
 
-/// Anota cuándo se mandó la señal y cuántas líneas tenía el registro técnico.
+/// El instante en que el proceso `pid` deja de correr, mirado cada 5 ms en
+/// `/proc`, hasta 10 s. Un proceso terminado que nadie esperó queda como
+/// zombi, con estado `Z`, y eso también cuenta como terminado.
+fn mirar_el_fin(pid: u32) -> std::thread::JoinHandle<Option<Instant>> {
+    std::thread::spawn(move || {
+        let inicio = Instant::now();
+        while inicio.elapsed() < Duration::from_secs(10) {
+            let estado = std::fs::read_to_string(format!("/proc/{pid}/stat"));
+            let terminado = match estado {
+                Err(_) => true,
+                Ok(linea) => linea
+                    .rsplit_once(") ")
+                    .is_some_and(|(_, resto)| resto.starts_with('Z') || resto.starts_with('X')),
+            };
+            if terminado {
+                return Some(Instant::now());
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        None
+    })
+}
+
+/// Anota cuándo se mandó la señal y cuántas líneas tenía el registro
+/// técnico, y empieza a mirar cuándo termina el proceso, así la medida no
+/// depende de cuándo le toca correr al paso siguiente.
 #[when("se envía SIGTERM al proceso osr")]
 fn envia_sigterm(mundo: &mut Mundo) {
     mundo.lineas_del_registro = mundo.registro_tecnico().lines().count();
     let osr = mundo.osr.as_ref().expect("falta «se ejecuta»");
+    let pid = osr.id();
     super::sigterm(osr);
     mundo.senal_enviada = Some(Instant::now());
+    mundo.fin_observado = Some(mirar_el_fin(pid));
 }
 
 #[then(expr = "osr termina con código de salida {int} a más tardar {int} s después")]
 fn termina_a_tiempo(mundo: &mut Mundo, codigo: i32, segundos: u64) {
     let enviada = mundo.senal_enviada.expect("falta «se envía SIGTERM»");
-    let limite = Duration::from_secs(segundos).saturating_sub(enviada.elapsed());
-    let osr = mundo.osr.as_mut().expect("falta «se ejecuta»");
-    let terminado = super::esperar(osr, limite);
-    assert!(enviada.elapsed() <= Duration::from_secs(segundos));
-    assert_eq!(
-        terminado,
-        Some(codigo),
-        "osr no terminó a tiempo con ese código"
+    let fin = mundo
+        .fin_observado
+        .take()
+        .expect("falta «se envía SIGTERM»")
+        .join()
+        .expect("el hilo que mira el fin");
+    let fin = fin.expect("osr no terminó en 10 s");
+    assert!(
+        fin.duration_since(enviada) <= Duration::from_secs(segundos),
+        "osr tardó {:?}",
+        fin.duration_since(enviada)
     );
+    let osr = mundo.osr.as_mut().expect("falta «se ejecuta»");
+    let terminado = super::esperar(osr, Duration::from_secs(5));
+    assert_eq!(terminado, Some(codigo), "osr no terminó con ese código");
     mundo.codigo = terminado;
 }
 
@@ -630,10 +663,15 @@ fn lineas_con_detalle(mundo: &mut Mundo) {
     }
 }
 
-// Solo XDG_STATE_HOME, la única variable que `osr` lee hoy (D-20).
-#[given(regex = r#"^la variable de entorno "(XDG_STATE_HOME)" vale "([^"]+)"$"#)]
-fn variable_de_entorno(mundo: &mut Mundo, _nombre: String, valor: String) {
-    mundo.xdg_state_home = Some(mundo.resolver(&valor).into());
+// Solo las variables que `osr` lee: XDG_STATE_HOME y HOME, con la que se
+// interpreta `~` en la pantalla de inicio (PRY-19, D-20).
+#[given(regex = r#"^la variable de entorno "(XDG_STATE_HOME|HOME)" vale "([^"]+)"$"#)]
+fn variable_de_entorno(mundo: &mut Mundo, nombre: String, valor: String) {
+    let valor = Some(mundo.resolver(&valor).into());
+    match nombre.as_str() {
+        "HOME" => mundo.home = valor,
+        _ => mundo.xdg_state_home = valor,
+    }
 }
 
 #[given(regex = r"^la umask del proceso osr es ([0-7]{3})$")]
@@ -643,7 +681,9 @@ fn con_umask(mundo: &mut Mundo, umask: String) {
 
 // Solo la carpeta de estado y el registro técnico; los permisos de lo que
 // está dentro del proyecto llegan con SRV-13 (D-20).
-#[then(regex = r#"^los permisos de "(\{tmp\}/estado/osr(?:/registro\.log)?)" son (0[0-7]{3})$"#)]
+#[then(
+    regex = r#"^los permisos de "(\{tmp\}/estado/osr(?:/registro\.log)?|\{aplicación\})" son (0[0-7]{3})$"#
+)]
 fn permisos_de(mundo: &mut Mundo, ruta: String, modo: String) {
     use std::os::unix::fs::PermissionsExt;
     let ruta = mundo.ruta(&ruta);

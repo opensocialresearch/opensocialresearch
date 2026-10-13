@@ -103,8 +103,8 @@ fn anotar_apertura(
     Ok(())
 }
 
-/// Abre el proyecto de `ruta` y lo deja con su bloqueo.
-pub fn abrir(ruta: &Path, momento: &Momento) -> Result<(), Error> {
+/// Abre el proyecto de `ruta`, lo deja con su bloqueo y devuelve su nombre.
+pub fn abrir(ruta: &Path, momento: &Momento) -> Result<String, Error> {
     if !ruta.is_dir() {
         return Err(Error::NoExiste(ruta.to_path_buf()));
     }
@@ -123,7 +123,8 @@ pub fn abrir(ruta: &Path, momento: &Momento) -> Result<(), Error> {
     anotar_apertura(ruta, &nombre, abandonado, momento).map_err(|error| {
         let _ = fs::remove_file(ruta.join(".osr/bloqueo"));
         escritura(error)
-    })
+    })?;
+    Ok(nombre)
 }
 
 #[cfg(test)]
@@ -171,7 +172,7 @@ mod pruebas {
     #[test]
     fn toma_el_bloqueo_y_anota_la_verificacion() {
         let (_tmp, raiz) = proyecto();
-        abrir(&raiz, &momento()).unwrap();
+        assert_eq!(abrir(&raiz, &momento()).unwrap(), "estudio");
         assert_eq!(
             fs::read_to_string(raiz.join(".osr/bloqueo")).unwrap(),
             plantillas::bloqueo(std::process::id(), "2026-10-12T05:00:00-06:00")

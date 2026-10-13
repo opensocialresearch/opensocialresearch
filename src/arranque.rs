@@ -8,9 +8,10 @@ use std::sync::Arc;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
+use crate::abierto::{Abierto, Compartido};
 use crate::cierre::{self, Cierre, Senales};
 use crate::escucha::{self, Escucha};
-use crate::{abrir, navegador, nuevo, registro, servidor, token};
+use crate::{abrir, aplicacion, navegador, nuevo, registro, servidor, token};
 
 /// Atiende con `rutas` en un socket ya abierto, en segundo plano, hasta que
 /// `cerrando` cambie. Entonces deja de aceptar y termina lo que tiene en curso.
@@ -32,13 +33,15 @@ fn atender(
 }
 
 /// Cierra de forma ordenada (SRV-15). Detiene los servidores, espera los
-/// pedidos en curso salvo que llegue otra señal, borra el bloqueo y anota el
-/// cierre. Termina con 0, o con 1 si una segunda señal cortó la espera.
+/// pedidos en curso salvo que llegue otra señal, borra el bloqueo del
+/// proyecto abierto en ese momento, también si se abrió desde la pantalla
+/// (PRY-21), y anota el cierre. Termina con 0, o con 1 si una segunda señal
+/// cortó la espera.
 async fn cerrar(
     senales: &mut Senales,
     cerrando: watch::Sender<()>,
     servidores: Vec<JoinHandle<()>>,
-    bloqueo: Option<std::path::PathBuf>,
+    abierto: &Compartido,
 ) -> ExitCode {
     let _ = cerrando.send(());
     let pendientes = async {
@@ -47,8 +50,8 @@ async fn cerrar(
         }
     };
     let cierre = cierre::cerrar(cierre::ESPERA, pendientes, senales.recibir()).await;
-    if let Some(bloqueo) = bloqueo {
-        let _ = std::fs::remove_file(bloqueo);
+    if let Some(abierto) = abierto.actual() {
+        let _ = std::fs::remove_file(abierto.carpeta.join(".osr/bloqueo"));
     }
     match cierre {
         Cierre::Ordenado => {
@@ -71,6 +74,29 @@ fn anotar_escucha(escucha: &Escucha) {
     }
 }
 
+/// Crea la carpeta de la aplicación si falta (PRY-24). Si no puede, lo
+/// anota en el registro técnico y sigue: crear una investigación lo vuelve a
+/// intentar.
+fn preparar_la_carpeta_de_la_aplicacion() {
+    let casa = std::env::var_os("HOME");
+    let Some(carpeta) = aplicacion::carpeta_desde(casa.as_deref()) else {
+        registro::anotar(
+            "aviso",
+            "sin carpeta personal para la carpeta de la aplicación",
+        );
+        return;
+    };
+    if let Err(error) = aplicacion::crear(&carpeta) {
+        registro::anotar(
+            "aviso",
+            &format!(
+                "no se pudo crear la carpeta de la aplicación ({})",
+                nuevo::motivo(&error)
+            ),
+        );
+    }
+}
+
 /// Qué hace `osr` antes de levantar el servidor.
 #[derive(Debug)]
 pub enum Accion<'a> {
@@ -82,17 +108,24 @@ pub enum Accion<'a> {
     Abrir(&'a Path),
 }
 
-/// Crea o abre el proyecto de `accion` y devuelve su carpeta, o el mensaje
-/// y el código de salida del error.
-fn preparar<'a>(accion: &Accion<'a>) -> Result<Option<&'a Path>, (String, i32)> {
+/// El proyecto abierto en `ruta` con su nombre, con la carpeta absoluta
+/// para el resumen (PRY-22).
+fn abierto_en(ruta: &Path, nombre: String) -> Abierto {
+    let carpeta = std::path::absolute(ruta).unwrap_or_else(|_| ruta.to_path_buf());
+    Abierto { carpeta, nombre }
+}
+
+/// Crea o abre el proyecto de `accion` y lo devuelve, o el mensaje y el
+/// código de salida del error.
+fn preparar(accion: &Accion<'_>) -> Result<Option<Abierto>, (String, i32)> {
     let momento = nuevo::Momento::ahora();
     match *accion {
         Accion::Inicio => Ok(None),
         Accion::Nuevo(ruta, nombre) => nuevo::crear(ruta, nombre, &momento)
-            .map(|()| Some(ruta))
+            .map(|nombre| Some(abierto_en(ruta, nombre)))
             .map_err(|error| (error.to_string(), error.codigo())),
         Accion::Abrir(ruta) => abrir::abrir(ruta, &momento)
-            .map(|()| Some(ruta))
+            .map(|nombre| Some(abierto_en(ruta, nombre)))
             .map_err(|error| (error.to_string(), error.codigo())),
     }
 }
@@ -111,6 +144,7 @@ pub async fn correr(accion: Accion<'_>, sin_navegador: bool) -> ExitCode {
         return ExitCode::from(5);
     };
     anotar_escucha(&escucha);
+    preparar_la_carpeta_de_la_aplicacion();
     let proyecto = match preparar(&accion) {
         Ok(proyecto) => proyecto,
         Err((mensaje, codigo)) => {
@@ -119,11 +153,8 @@ pub async fn correr(accion: Accion<'_>, sin_navegador: bool) -> ExitCode {
         }
     };
     let token: Arc<str> = token::nuevo().expect("leer /dev/urandom").into();
-    let rutas = servidor::rutas(
-        token.clone(),
-        escucha.puerto,
-        proyecto.map(Path::to_path_buf),
-    );
+    let abierto = Compartido::con(proyecto);
+    let rutas = servidor::rutas(token.clone(), escucha.puerto, abierto.clone());
     let (cerrando, aviso) = watch::channel(());
     let mut servidores = vec![atender(escucha.v4, rutas.clone(), aviso.clone())];
     servidores.extend(escucha.v6.map(|v6| atender(v6, rutas, aviso)));
@@ -133,6 +164,5 @@ pub async fn correr(accion: Accion<'_>, sin_navegador: bool) -> ExitCode {
         navegador::abrir(&direccion);
     }
     senales.recibir().await;
-    let bloqueo = proyecto.map(|ruta| ruta.join(".osr/bloqueo"));
-    cerrar(&mut senales, cerrando, servidores, bloqueo).await
+    cerrar(&mut senales, cerrando, servidores, &abierto).await
 }

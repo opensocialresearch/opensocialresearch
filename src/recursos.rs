@@ -24,13 +24,11 @@ macro_rules! recurso {
     };
 }
 
-const RECURSOS: [Recurso; 8] = [
+const RECURSOS: [Recurso; 6] = [
     recurso!("estilos.css", "text/css; charset=utf-8"),
     recurso!("entrada.js", "text/javascript; charset=utf-8"),
-    recurso!("fuentes/Archivo.woff2", "font/woff2"),
-    recurso!("fuentes/IBMPlexMono-400.woff2", "font/woff2"),
-    recurso!("fuentes/IBMPlexMono-500.woff2", "font/woff2"),
-    recurso!("fuentes/IBMPlexMono-600.woff2", "font/woff2"),
+    recurso!("inicio.js", "text/javascript; charset=utf-8"),
+    recurso!("bienvenida.js", "text/javascript; charset=utf-8"),
     recurso!("fuentes/SourceSerif4.woff2", "font/woff2"),
     recurso!("fuentes/SourceSerif4-Italic.woff2", "font/woff2"),
 ];
@@ -65,7 +63,7 @@ mod pruebas {
         let estilos = cuerpo(respuesta).await;
         assert_eq!(estilos, include_bytes!("../recursos/estilos.css"));
 
-        let respuesta = servir("fuentes/Archivo.woff2");
+        let respuesta = servir("fuentes/SourceSerif4.woff2");
         assert_eq!(respuesta.headers()[header::CONTENT_TYPE], "font/woff2");
         assert_eq!(&cuerpo(respuesta).await[..4], b"wOF2");
     }
@@ -77,9 +75,25 @@ mod pruebas {
             "",
             "../Cargo.toml",
             "fuentes/",
+            "fuentes/Archivo.woff2",
             "estilos.css/",
         ] {
             assert_eq!(servir(camino).status(), StatusCode::NOT_FOUND, "{camino}");
+        }
+    }
+
+    /// Cada `<script>` y hoja de estilos que piden las páginas se sirve.
+    #[test]
+    fn las_paginas_solo_piden_recursos_que_se_sirven() {
+        for pagina in [
+            include_str!("paginas/inicio.html"),
+            include_str!("paginas/bienvenida.html"),
+            include_str!("paginas/resumen.html"),
+        ] {
+            for pedido in pagina.split("\"/recursos/").skip(1) {
+                let camino = &pedido[..pedido.find('"').unwrap()];
+                assert_eq!(servir(camino).status(), StatusCode::OK, "{camino}");
+            }
         }
     }
 

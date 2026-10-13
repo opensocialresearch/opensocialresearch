@@ -6,6 +6,70 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer uso, inicio por el diseño y sistema visual nuevo
 
+- **D-53.** Sin rutas en la pantalla: carpeta de la aplicación (PRY-24).
+  Al probar la pantalla, Carlos pidió que no se le pregunte ninguna carpeta:
+  la aplicación tiene la suya, se crea al inicio, todo queda dentro y solo
+  hay que ponerle nombre a la investigación. Eligió `~/Open Social Research`
+  (frente a `~/Documentos/Open Social Research`, que depende del idioma del
+  sistema, y a `~/Investigaciones`) y que cada investigación vaya en una
+  subcarpeta con el nombre simplificado, sin tildes ni espacios y con `-2`
+  si se repite, frente al nombre tal cual, que trae problemas en Windows y
+  al copiar a otros discos. Crear (PRY-19) pide solo el nombre; abrir
+  (PRY-20) es una lista de las investigaciones de esa carpeta con su botón
+  «Abrir», y lo que está en otra carpeta se abre con `osr abrir` en la
+  terminal. La bienvenida (PRY-23) sale mientras la carpeta de la aplicación
+  no tenga investigaciones, lo que reemplaza el archivo `primer-proyecto` de
+  D-50: es más simple, no deja estado aparte y coincide con lo que ve la
+  persona. Cambian los textos de `osr` en la tabla de SRV-01 y el escenario
+  aprobado SRV-01.1, que ahora parte de una investigación en la carpeta de la
+  aplicación. En la interfaz se dice «investigación»; en el código y en los
+  archivos el formato sigue siendo un «proyecto». Las pruebas usan una
+  carpeta personal propia de cada escenario, así nunca escriben en la del
+  equipo. Para el nombre simplificado se agrega `unicode-normalization`
+  0.1, que hace la descomposición NFD de PRY-24 y servirá para la forma NFC
+  de PRY-06; se descartó una tabla propia de letras con tilde, que se queda
+  corta fuera del español. La carpeta de la aplicación la crea el arranque
+  (`src/aplicacion.rs`) y, si falla, lo anota en el registro técnico; crear
+  una investigación la vuelve a intentar. El servidor recibe la carpeta
+  personal al arrancar, así las pruebas unitarias usan una temporal. Se
+  retira `src/primer_uso.rs` y con él la interpretación de rutas escritas de
+  D-52 (`~`, espacios en los extremos, rutas relativas), que ya no hacen
+  falta porque la persona no escribe rutas.
+
+- **D-52.** Crear y abrir desde la pantalla (PRY-19 a PRY-22). Las acciones
+  son `POST /api/proyecto/crear` y `POST /api/proyecto/abrir`, que entran en
+  `src/rutas.rs` y con eso en las baterías de SRV-05, SRV-07 y SRV-10. El
+  proyecto abierto pasa a ser un estado compartido (`src/abierto.rs`) que
+  leen la página `/`, el audio y el cierre, así SRV-15 borra también el
+  bloqueo de un proyecto abierto desde la pantalla. Cada acción corre en
+  `spawn_blocking` con el candado tomado desde que comprueba que no hay
+  proyecto hasta que lo anota, que es lo que hace que de diez pedidos a la
+  vez se atienda uno solo (PRY-21.3). La carpeta del resumen es la ruta
+  absoluta: la interpretada en la pantalla o la de la terminal pasada por
+  `std::path::absolute`. La pantalla de inicio deja de tener los botones
+  inactivos de D-40 y su código vive en `recursos/inicio.js`. Durante la
+  implementación se agregaron a PRY-19 dos cosas que la especificación no
+  decía: qué campo se marca y recibe el foco con un error, y el mensaje
+  `No hubo respuesta de Open Social Research. Hay que comprobar que siga
+  abierto en la terminal.` para cuando la pestaña no recibe respuesta.
+  También se precisó que la mayúscula inicial no se aplica a un mensaje que
+  empieza con una ruta o con `proyecto.toml`. En las pruebas, «la página "/"
+  de la sesión» compara el texto que vería una persona, sin etiquetas y con
+  las entidades resueltas; `HOME` se puede fijar por escenario; y cada
+  proceso anterior guarda su puerto y su token, porque en PRY-20.3 los dos
+  procesos siguen vivos.
+  La bienvenida (PRY-23) es una sola página con sus dos vistas, y
+  `recursos/bienvenida.js` pasa de una a otra sin pedir otra página. El
+  recuerdo del primer uso lo escriben el arranque, tras crear o abrir desde la
+  terminal, y la acción de la API, tras crear o abrir con éxito, nunca
+  `nuevo::crear` ni `abrir::abrir`; el servidor lo recibe como dos funciones,
+  así las pruebas unitarias no tocan la carpeta de estado real. El paso
+  «osr termina con código de salida N a más tardar S s después» mide ahora
+  el momento real en que termina el proceso, mirado desde que se manda la
+  señal, y no el momento en que le toca correr al paso: con la suite
+  completa y la cobertura, el paso empezaba tarde aunque `osr` hubiera
+  cerrado en milisegundos. El umbral de 3 s no cambia.
+
 - **D-51.** Sistema visual nuevo. Carlos rehízo el sistema de diseño en
   Claude Design el 2026-10-12 y pidió adoptarlo. Pasa de «negro sobre papel»
   a una herramienta con la claridad de una app de escritorio: ventana gris

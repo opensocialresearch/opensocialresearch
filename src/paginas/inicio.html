@@ -6,45 +6,31 @@
 <title>Open Social Research</title>
 <link rel="stylesheet" href="/recursos/estilos.css">
 <script src="/recursos/entrada.js"></script>
+<script src="/recursos/inicio.js" defer></script>
 </head>
 <body>
-<header class="encabezado">
+<header class="barra">
   <span class="marca">Open Social Research</span>
 </header>
 <main class="columna">
-  <p class="rotulo">Sin proyecto abierto</p>
-  <h1 class="display">Abrir un proyecto o crear uno nuevo.</h1>
-  <p class="entrada">Un proyecto es una carpeta de esta computadora. Todo lo que se registra queda en ella, en archivos de texto abierto.</p>
-  <ol class="pasos">
-    <li>
-      <span class="numero">01</span>
-      <section>
-        <h2>Abrir proyecto</h2>
-        <form>
-          <label class="campo"><span>Carpeta del proyecto</span><input class="mono" name="ruta" required></label>
-          <div class="acciones">
-            <button class="boton principal" disabled>Abrir proyecto</button>
-            <span class="pequeno">Todavía no se abre desde aquí. Por ahora, <span class="mono">osr abrir &lt;carpeta&gt;</span> en la terminal.</span>
-          </div>
-        </form>
-      </section>
-    </li>
-    <li>
-      <span class="numero">02</span>
-      <section>
-        <h2>Crear proyecto</h2>
-        <form>
-          <label class="campo"><span>Carpeta nueva o vacía</span><input class="mono" name="ruta" required></label>
-          <label class="campo"><span>Nombre</span><input name="nombre"></label>
-          <div class="acciones">
-            <button class="boton" disabled>Crear proyecto</button>
-            <span class="pequeno">Todavía no se crea desde aquí. Por ahora, <span class="mono">osr nuevo &lt;carpeta&gt;</span> en la terminal.</span>
-          </div>
-        </form>
-      </section>
-    </li>
-  </ol>
-  <p class="pie">Todo queda en esta computadora. Sin cuentas ni conexión a internet.</p>
+  <p class="rotulo">Sin investigación abierta</p>
+  <h1 class="titulo">Investigaciones</h1>
+  <p class="entrada">Están en la carpeta Open Social Research de esta computadora, en archivos de texto abierto que se pueden leer sin la herramienta.</p>
+  <ul class="lista lista--investigaciones">
+{{investigaciones}}  </ul>
+  <form class="tarjeta" aria-labelledby="crear-t" data-accion="/api/proyecto/crear">
+    <h2 id="crear-t">Nueva investigación</h2>
+    <div class="campo">
+      <label for="crear-nombre">Nombre de la investigación</label>
+      <input id="crear-nombre" class="control" name="nombre" placeholder="Caminar en el centro de San José" autocomplete="off" data-ayuda="nombre-ayuda" aria-describedby="nombre-ayuda">
+      <span id="nombre-ayuda" class="ayuda">La carpeta de la investigación lleva este nombre, sin tildes ni espacios.</span>
+    </div>
+    <div class="acciones">
+      <button type="submit" class="boton boton--principal" data-esperando="Creando…">Crear investigación</button>
+    </div>
+    <div id="crear-error" class="aviso-error" role="alert" hidden>{{aviso}}<span></span></div>
+  </form>
+  <p class="pie">Todo queda en esta computadora. Sin cuentas ni conexión a internet. Un proyecto en otra carpeta se abre con <span class="mono">osr abrir &lt;carpeta&gt;</span> en la terminal.</p>
 </main>
 </body>
 </html>

@@ -145,6 +145,8 @@ impl Mundo {
             && anterior.try_wait().unwrap().is_none()
         {
             self.anteriores.push(anterior);
+            self.sesiones_anteriores
+                .push((self.puerto, self.token.clone()));
         }
         self.codigo = None;
         self.esperar_listo();
@@ -283,8 +285,17 @@ async fn primero_atiende(mundo: &mut Mundo) {
         .first_mut()
         .expect("falta el primer proceso");
     assert!(primero.try_wait().unwrap().is_none(), "el primero terminó");
-    let token = mundo.token.clone().expect("osr no escribió su token");
-    let respuesta = super::http::Pedido::nuevo("GET", mundo.direccion("/"))
+    // El primero tiene su propio puerto y su token, que pueden no ser los
+    // del último proceso si este sigue vivo (PRY-20.3).
+    let (puerto, token) = mundo.sesiones_anteriores[0].clone();
+    let puerto = puerto
+        .or(mundo.puerto)
+        .expect("el primero no escribió su puerto");
+    let token = token
+        .or(mundo.token.clone())
+        .expect("el primero no escribió su token");
+    let direccion = format!("http://127.0.0.1:{puerto}/");
+    let respuesta = super::http::Pedido::nuevo("GET", direccion)
         .con_encabezado("Authorization", &format!("Bearer {token}"))
         .mandar()
         .await;

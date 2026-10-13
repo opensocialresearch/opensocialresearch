@@ -57,7 +57,7 @@ impl Mundo {
         pedido.encabezados.push((nombre.to_string(), valor));
     }
 
-    fn token_valido(&self) -> String {
+    pub(super) fn token_valido(&self) -> String {
         self.token.clone().expect("osr no escribió su token")
     }
 }
@@ -106,6 +106,11 @@ impl Pedido {
             cuerpo: None,
             sin_host: false,
         }
+    }
+
+    pub fn con_cuerpo(mut self, cuerpo: String) -> Pedido {
+        self.cuerpo = Some(cuerpo);
+        self
     }
 
     pub fn con_encabezado(mut self, nombre: &str, valor: &str) -> Pedido {
@@ -255,7 +260,7 @@ async fn se_manda(mundo: &mut Mundo) {
 
 // Solo los estados que el servidor ya produce y alguna prueba puede pedir. El
 // 410 espera al paso de TRA-23 que elimina el audio (D-20, D-39).
-#[then(regex = r"^la respuesta tiene estado (200|206|401|403|404|405|416)$")]
+#[then(regex = r"^la respuesta tiene estado (200|206|400|401|403|404|405|409|416|422|500)$")]
 fn estado_es(mundo: &mut Mundo, estado: u16) {
     let respuesta = mundo
         .respuesta
@@ -293,8 +298,8 @@ fn tiene_el_encabezado(mundo: &mut Mundo, nombre: String) {
 
 #[then("el cuerpo de la respuesta es el JSON")]
 fn cuerpo_json(mundo: &mut Mundo, step: &cucumber::gherkin::Step) {
-    let esperado: serde_json::Value =
-        serde_json::from_str(step.docstring.as_ref().expect("falta el JSON")).unwrap();
+    let docstring = step.docstring.as_ref().expect("falta el JSON");
+    let esperado: serde_json::Value = serde_json::from_str(&mundo.resolver(docstring)).unwrap();
     let respuesta = mundo
         .respuesta
         .as_ref()

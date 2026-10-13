@@ -46,7 +46,7 @@ total de conexiones salientes y las cifras de memoria y arranque.
 
 | Orden | Efecto |
 |---|---|
-| `osr` | Levanta el servidor sin proyecto. La interfaz muestra `Abrir proyecto`, con un campo para la ruta, y `Crear proyecto`, con campos para la ruta y el nombre. Mientras la cuenta no haya creado ni abierto ningún proyecto, muestra antes la bienvenida de PRY-23 [D-50]. |
+| `osr` | Levanta el servidor sin proyecto. La interfaz muestra la lista `Investigaciones` de la carpeta de la aplicación, con `Abrir` en cada una (PRY-20), y `Crear investigación`, que pide solo el nombre (PRY-19). Mientras la carpeta de la aplicación no tenga ninguna investigación, muestra la bienvenida de PRY-23 [D-50, D-53]. |
 | `osr abrir <ruta>` o `osr <ruta>` | Abre el proyecto según PRY-04. |
 | `osr nuevo <ruta> [--nombre <texto>]` | Crea y abre el proyecto según PRY-01. |
 

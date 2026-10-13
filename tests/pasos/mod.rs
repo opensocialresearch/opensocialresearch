@@ -6,6 +6,7 @@
 mod archivos;
 mod http;
 mod orden;
+mod pantalla;
 mod readme;
 mod servidor;
 
@@ -38,6 +39,8 @@ pub struct Mundo {
     /// Los procesos `osr` que seguían corriendo cuando se lanzó otro, del
     /// más viejo al más nuevo, para no perderlos ni dejarlos vivos.
     anteriores: Vec<Child>,
+    /// El puerto y el token de cada proceso de `anteriores`, en el mismo orden.
+    sesiones_anteriores: Vec<(Option<u16>, Option<String>)>,
     /// Cuántas líneas tenía el registro de eventos al guardar la cantidad.
     lineas_de_eventos: usize,
     /// El cuerpo de la interfaz que guardó «se guarda el estado que muestra la app».
@@ -80,6 +83,9 @@ pub struct Mundo {
     respuestas: Vec<(String, http::Respuesta)>,
     /// Cuándo se mandó SIGTERM y cuántas líneas tenía antes el registro técnico.
     senal_enviada: Option<Instant>,
+    /// El hilo que mira cuándo termina de verdad el proceso después de la
+    /// señal, y devuelve ese instante.
+    fin_observado: Option<JoinHandle<Option<Instant>>>,
     lineas_del_registro: usize,
     /// Las familias de rutas que el escenario ya revisó por su nombre.
     familias_vistas: Vec<String>,
@@ -90,6 +96,11 @@ pub struct Mundo {
     xdg_state_home: Option<PathBuf>,
     /// La umask con la que se lanza `osr`, en octal, si el escenario la fija.
     umask: Option<String>,
+    /// `HOME` de `osr`, si el escenario la fija. Si no, una carpeta personal
+    /// en `aparte`, así ningún `osr` escribe en la del equipo (PRY-24).
+    home: Option<PathBuf>,
+    /// La segunda huella de un escenario que compara dos carpetas.
+    segunda_huella: BTreeMap<String, Option<Vec<u8>>>,
     /// Los bytes que guardó «se guardó una copia de … como versión editada».
     version_editada: Option<Vec<u8>>,
 }
@@ -103,6 +114,7 @@ impl Mundo {
             salidas: None,
             osr: None,
             anteriores: Vec::new(),
+            sesiones_anteriores: Vec::new(),
             estado_guardado: None,
             lineas_de_eventos: 0,
             codigo: None,
@@ -126,9 +138,12 @@ impl Mundo {
             familias_vistas: Vec::new(),
             bateria: Vec::new(),
             senal_enviada: None,
+            fin_observado: None,
             lineas_del_registro: 0,
             xdg_state_home: None,
             umask: None,
+            home: None,
+            segunda_huella: BTreeMap::new(),
             version_editada: None,
         }
     }
@@ -136,16 +151,30 @@ impl Mundo {
     /// El entorno de cada `osr`. La carpeta de estado queda en `aparte` y el
     /// `PATH` solo tiene un `xdg-open` de prueba que anota cómo lo llamaron,
     /// o nada si el escenario pide que no haya navegador.
-    fn entorno(&self) -> [(&'static str, PathBuf); 2] {
+    fn entorno(&self) -> Vec<(&'static str, PathBuf)> {
         let carpeta = if self.sin_navegador { "vacia" } else { "bin" };
         let estado = self.xdg_state_home.clone();
-        [
+        let mut entorno = vec![
             (
                 "XDG_STATE_HOME",
                 estado.unwrap_or_else(|| self.aparte.path().join("estado")),
             ),
             ("PATH", self.aparte.path().join(carpeta)),
-        ]
+        ];
+        entorno.push(("HOME", self.casa()));
+        entorno
+    }
+
+    /// La carpeta personal de `osr` en el escenario.
+    pub(super) fn casa(&self) -> PathBuf {
+        self.home
+            .clone()
+            .unwrap_or_else(|| self.aparte.path().join("casa"))
+    }
+
+    /// `{aplicación}`, la carpeta de la aplicación de PRY-24.
+    pub(super) fn aplicacion(&self) -> PathBuf {
+        self.casa().join("Open Social Research")
     }
 
     /// `nsenter` listo para correr un programa en el espacio de nombres del
@@ -165,8 +194,7 @@ impl Mundo {
     /// La carpeta de estado de `osr`, la de las pruebas salvo que el
     /// escenario fije `XDG_STATE_HOME`.
     fn carpeta_de_estado(&self) -> PathBuf {
-        let [(_, xdg), _] = self.entorno();
-        xdg.join("osr")
+        self.entorno()[0].1.join("osr")
     }
 
     /// El registro técnico de `osr`, en su carpeta de estado.
@@ -182,6 +210,9 @@ impl Mundo {
     /// Reemplaza los marcadores de las convenciones de `proyecto.feature`.
     fn resolver(&self, texto: &str) -> String {
         let mut texto = texto.replace("{201 veces la letra a}", &"a".repeat(201));
+        texto = texto.replace("{120 veces la letra a}", &"a".repeat(120));
+        texto = texto.replace("{60 veces la letra a}", &"a".repeat(60));
+        texto = texto.replace("{aplicación}", &self.aplicacion().to_string_lossy());
         texto = texto.replace("{Uno, salto de línea, Dos}", "Uno\nDos");
         if let Some(primero) = self.anteriores.first() {
             texto = texto.replace("{PID del primer proceso}", &primero.id().to_string());

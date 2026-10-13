@@ -28,4 +28,12 @@ pub const RUTAS: &[Ruta] = &[
         camino: "/audio/{entrevista}",
         metodos: &["GET"],
     },
+    Ruta {
+        camino: "/api/proyecto/crear",
+        metodos: &["POST"],
+    },
+    Ruta {
+        camino: "/api/proyecto/abrir",
+        metodos: &["POST"],
+    },
 ];

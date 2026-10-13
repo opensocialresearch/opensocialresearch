@@ -1,108 +1,178 @@
-/* Estilos de la interfaz, del sistema de diseño de docs/diseno/README.md.
+/* Estilos de la interfaz, del sistema de diseño de Claude Design (D-51).
    Ningún color se escribe fuera de los tokens. El tema es claro salvo que la
-   raíz lleve data-tema="oscuro", sin seguir la preferencia del sistema (D-41). */
+   raíz lleve data-tema="oscuro", sin seguir la preferencia del sistema (D-41).
+   La interfaz usa la fuente del sistema; Source Serif 4 es solo para lo que la
+   persona escribe y lee largo. */
 
-@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 400 700;
-  font-stretch: 62% 125%; font-display: swap; src: url(/recursos/fuentes/Archivo.woff2) format('woff2'); }
-@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400;
-  font-display: swap; src: url(/recursos/fuentes/IBMPlexMono-400.woff2) format('woff2'); }
-@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500;
-  font-display: swap; src: url(/recursos/fuentes/IBMPlexMono-500.woff2) format('woff2'); }
-@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600;
-  font-display: swap; src: url(/recursos/fuentes/IBMPlexMono-600.woff2) format('woff2'); }
 @font-face { font-family: 'Source Serif 4'; font-style: normal; font-weight: 400 600;
   font-display: swap; src: url(/recursos/fuentes/SourceSerif4.woff2) format('woff2'); }
 @font-face { font-family: 'Source Serif 4'; font-style: italic; font-weight: 400;
   font-display: swap; src: url(/recursos/fuentes/SourceSerif4-Italic.woff2) format('woff2'); }
 
 :root {
-  --papel: #FBFAF7; --superficie: #FFFFFF; --hundido: #F1EFEA;
-  --tinta: #1A1916; --tinta-2: #4A4741; --tinta-3: #67635B;
-  --linea: #DDD9D1; --linea-fuerte: #8A857B;
-  --acento: #2350A8; --acento-suave: #E5ECF8; --sobre-acento: #FFFFFF;
-  --error: #B3261E; --error-suave: #FBEAE7; --sobre-error: #FFFFFF;
-  --trama: rgba(26,25,22,.22); --velo: rgba(26,25,22,.42);
+  --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --serif: "Source Serif 4", "New York", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  --fondo: #F5F5F7; --superficie: #FFFFFF; --material: #FFFFFF;
+  --relleno: rgba(120,120,128,.12); --relleno-2: rgba(120,120,128,.2); --segmento-sel: #FFFFFF;
+  --tinta: #1D1D1F; --tinta-2: #515154; --tinta-3: #6E6E73;
+  --separador: rgba(60,60,67,.14); --borde-tarjeta: rgba(0,0,0,.07);
+  --borde-suave: rgba(60,60,67,.3); --borde-control: #8E8E93;
+  --acento: #0066CC; --acento-relleno: #0071E3; --acento-suave: rgba(0,113,227,.1); --foco: #3A86D1;
+  --exito: #1E7B34; --exito-suave: rgba(52,199,89,.14);
+  --aviso: #9A4A00; --aviso-suave: rgba(255,149,0,.16);
+  --error: #D70015; --error-relleno: #D70015; --error-suave: rgba(215,0,21,.08);
+  --ident: #5856D6; --ident-relleno: #5856D6; --ident-suave: rgba(88,86,214,.1); --ident-borde: rgba(88,86,214,.35);
+  --velo: rgba(0,0,0,.25);
+  --sombra-flotante: 0 16px 48px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.12);
   color-scheme: light;
 }
 :root[data-tema="oscuro"] {
-  --papel: #161513; --superficie: #1E1D1A; --hundido: #27251F;
-  --tinta: #ECE9E2; --tinta-2: #BEB9AF; --tinta-3: #9C978D;
-  --linea: #36332D; --linea-fuerte: #7A766C;
-  --acento: #8FB2F2; --acento-suave: #1E2A42; --sobre-acento: #0F1420;
-  --error: #F09A90; --error-suave: #3A1E1B; --sobre-error: #1A0D0B;
-  --trama: rgba(236,233,226,.24); --velo: rgba(0,0,0,.62);
+  --fondo: #1C1C1E; --superficie: #2C2C2E; --material: #1E1E20;
+  --relleno: rgba(120,120,128,.24); --relleno-2: rgba(120,120,128,.36); --segmento-sel: #636366;
+  --tinta: #F5F5F7; --tinta-2: #C7C7CC; --tinta-3: #A1A1A6;
+  --separador: rgba(84,84,88,.6); --borde-tarjeta: rgba(255,255,255,.07);
+  --borde-suave: rgba(235,235,245,.24); --borde-control: #8E8E93;
+  --acento: #4DA3FF; --acento-relleno: #0A6ED9; --acento-suave: rgba(10,132,255,.2); --foco: #4DA3FF;
+  --exito: #4CD964; --exito-suave: rgba(48,209,88,.18);
+  --aviso: #FFB340; --aviso-suave: rgba(255,159,10,.18);
+  --error: #FF6961; --error-relleno: #D70015; --error-suave: rgba(255,69,58,.16);
+  --ident: #A5A3FF; --ident-relleno: #5856D6; --ident-suave: rgba(94,92,230,.22); --ident-borde: rgba(165,163,255,.4);
+  --velo: rgba(0,0,0,.5);
+  --sombra-flotante: 0 16px 48px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.14);
   color-scheme: dark;
 }
-/* Base: Archivo semicondensada, cuerpo 13 px. */
+
+/* Base: fuente del sistema, cuerpo 13 px, ventana gris. */
 html, body { margin: 0; min-height: 100%; }
 body {
-  background: var(--papel); color: var(--tinta);
-  font-family: 'Archivo', system-ui, sans-serif; font-stretch: 87.5%;
-  font-size: 13px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+  background: var(--fondo); color: var(--tinta);
+  font-family: var(--ui); font-size: 13px; line-height: 1.4; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; min-height: 100vh;
 }
 a { color: var(--acento); }
-a:hover { color: var(--tinta); }
-:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-.mono { font-family: 'IBM Plex Mono', monospace; }
+:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.mono { font-family: var(--mono); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-/* Encabezado del marco, 44 px con línea de tinta. */
-.encabezado {
-  display: flex; align-items: center; gap: 14px; height: 44px; box-sizing: border-box;
-  padding: 0 16px; border-bottom: 1px solid var(--tinta); background: var(--papel);
+/* Barra de herramientas de 52 px con la marca. */
+.barra {
+  display: flex; align-items: center; gap: 12px; height: 52px; box-sizing: border-box; flex: none;
+  padding: 0 32px; border-bottom: 1px solid var(--separador); background: var(--material);
 }
-.encabezado .marca { font-weight: 700; font-size: 13px; letter-spacing: .01em; }
+.barra .marca { font-weight: 600; font-size: 13px; }
 
-/* Escala tipográfica. */
-.rotulo {
-  margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--tinta-2);
-}
-.display {
-  margin: 0; font-size: 28px; line-height: 1.18; font-weight: 650;
-  letter-spacing: -.01em; text-wrap: pretty;
-}
-.entrada { margin: 0; font-size: 14px; line-height: 1.55; color: var(--tinta-2); max-width: 62ch; text-wrap: pretty; }
-.pequeno { font-size: 12.5px; color: var(--tinta-2); }
-.pie { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--tinta-3); }
+/* Jerarquía con peso, no con tamaño. */
+.rotulo { margin: 0; font-size: 13px; font-weight: 600; color: var(--tinta-3); }
+.titulo { margin: 6px 0 0; font-size: 26px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; text-wrap: pretty; }
+.entrada { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--tinta-2); max-width: 66ch; text-wrap: pretty; }
+.ayuda { font-size: 12px; line-height: 1.4; color: var(--tinta-3); }
+.nota { margin: 0; font-size: 13px; line-height: 1.45; color: var(--tinta-3); }
+.pie { margin: auto 0 0; padding-top: 20px; font-size: 12px; line-height: 1.45; color: var(--tinta-3); }
 
-/* Columna de contenido de una vista sin datos. */
+/* Columna de formularios, alineada a la izquierda. */
 .columna {
-  max-width: 760px; padding: 56px 48px; box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 18px;
+  flex: 1; width: 100%; max-width: 640px; box-sizing: border-box;
+  padding: 36px 48px 20px; display: flex; flex-direction: column;
 }
 
-/* Bloques numerados, con línea de tinta arriba y filas separadas por línea fina. */
-.pasos { list-style: none; margin: 20px 0 0; padding: 0; border-top: 1px solid var(--tinta); }
-.pasos > li {
-  display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 4px 0;
-  padding: 16px 0; border-bottom: 1px solid var(--linea);
+/* Superficies agrupadas: tarjetas blancas sobre el gris, sin sombra. */
+.tarjeta {
+  margin-top: 22px; padding: 18px 20px 20px; background: var(--superficie);
+  border-radius: 12px; box-shadow: 0 0 0 1px var(--borde-tarjeta);
+  display: flex; flex-direction: column; gap: 14px;
 }
-.pasos .numero { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--tinta-3); padding-top: 2px; }
-.pasos h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
-.pasos form { display: flex; flex-direction: column; gap: 12px; max-width: 480px; }
+.tarjeta h2 { margin: 0; font-size: 15px; font-weight: 600; }
 
-/* Campos: rótulo 12,5 seminegrita, control de 32 px con borde línea-fuerte. */
+/* Campos: control de 32 px, radio 7. */
 .campo { display: flex; flex-direction: column; gap: 5px; }
-.campo > span { font-size: 12.5px; font-weight: 600; }
-.campo input {
-  height: 32px; box-sizing: border-box; padding: 0 10px;
-  border: 1px solid var(--linea-fuerte); border-radius: 3px;
+.campo label { font-size: 13px; font-weight: 500; }
+.control {
+  width: 100%; min-width: 0; height: 32px; box-sizing: border-box; padding: 0 10px;
+  border: 1px solid var(--borde-control); border-radius: 7px;
   background: var(--superficie); color: var(--tinta); font: inherit; font-size: 13px;
 }
-.campo input.mono { font-family: 'IBM Plex Mono', monospace; }
+.control.mono { font-family: var(--mono); }
+.control:focus-visible { outline: 3px solid var(--foco); outline-offset: 1px; }
+.control[readonly] { background: var(--relleno); color: var(--tinta-2); }
+.control[aria-invalid="true"] { border-color: var(--error); box-shadow: 0 0 0 3px var(--error-suave); }
+.en-linea { display: flex; gap: 8px; align-items: center; }
 
-/* Botones. Uno principal por vista, en tinta llena; secundario con contorno;
-   inactivo con borde punteado y el motivo al lado. */
+/* Botones de 30 px, radio 7. Un principal azul por vista. */
 .acciones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .boton {
-  height: 32px; padding: 0 14px; border-radius: 3px; cursor: pointer;
-  font: inherit; font-size: 13px; font-weight: 500;
-  border: 1px solid var(--linea-fuerte); background: var(--superficie); color: var(--tinta);
+  height: 30px; padding: 0 14px; border: 0; border-radius: 7px; cursor: pointer; flex: none;
+  background: var(--relleno); color: var(--tinta); font: inherit; font-size: 13px; font-weight: 500; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 8px;
 }
-.boton:hover { border-color: var(--tinta); }
-.boton.principal { border-color: var(--tinta); background: var(--tinta); color: var(--papel); font-weight: 600; }
-.boton.principal:hover { background: var(--tinta-2); }
-.boton:disabled, .boton.principal:disabled {
-  cursor: default; border: 1px dashed var(--linea-fuerte); background: transparent; color: var(--tinta-3);
+.boton:active { background: var(--relleno-2); }
+.boton--principal { background: var(--acento-relleno); color: #FFFFFF; }
+.boton--principal:active { background: var(--acento); }
+.boton:disabled { cursor: default; background: var(--relleno); color: var(--tinta-3); }
+.boton--grande { height: 40px; min-width: 200px; padding: 0 28px; border-radius: 10px; font-size: 15px; justify-content: center; }
+.boton svg { width: 10px; height: 10px; }
+
+/* Aviso de error con ícono y texto, asociado al campo. */
+.aviso-error {
+  display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; border-radius: 8px;
+  background: var(--error-suave); color: var(--error); font-size: 13px; line-height: 1.45; font-weight: 500;
 }
+.aviso-error svg { flex: none; width: 13px; height: 13px; margin-top: 2px; }
+
+/* Salida secundaria para abrir un proyecto existente. */
+.otra-salida {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--separador);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.otra-salida .acciones span { font-size: 13px; color: var(--tinta-2); }
+
+/* Bienvenida: columna de 600 px centrada. */
+.pantalla-centrada {
+  flex: 1; box-sizing: border-box; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 24px 10vh; text-align: center;
+}
+.pantalla-centrada > div { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; }
+.marca-simbolo { width: 64px; height: 64px; color: var(--tinta); }
+.marca-simbolo .cuadrante { fill: var(--fondo); }
+.marca--display { margin: 24px 0 0; font-size: 40px; line-height: 1.08; font-weight: 700; letter-spacing: -.025em; }
+.lema { margin: 12px 0 0; font-family: var(--serif); font-size: 19px; line-height: 1.45; color: var(--tinta-2); max-width: 30em; text-wrap: balance; }
+.rasgos {
+  list-style: none; margin: 40px 0 0; padding: 20px 0 0; width: 100%;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--separador);
+}
+.rasgos li { padding: 0 16px; display: flex; flex-direction: column; gap: 6px; }
+.rasgos li + li { border-left: 1px solid var(--separador); }
+.rasgos strong { font-size: 13px; font-weight: 600; }
+.rasgos span { font-size: 13px; line-height: 1.45; color: var(--tinta-2); text-wrap: balance; }
+.pantalla-centrada .boton--grande { margin-top: 40px; }
+.pantalla-centrada .pie { margin-top: 32px; padding-top: 0; font-size: 12.5px; }
+
+/* Resumen del proyecto: grupos numerados en tarjetas. */
+.resumen { flex: 1; box-sizing: border-box; padding: 28px 32px 40px; }
+.resumen > div { max-width: 880px; display: flex; flex-direction: column; gap: 20px; }
+.carpeta { font-family: var(--mono); font-size: 12.5px; color: var(--tinta-2); overflow-wrap: anywhere; }
+.grupo { display: flex; flex-direction: column; gap: 10px; }
+.grupo__cabeza { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.grupo__cabeza h2 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+.grupo__cabeza .numero { font-family: var(--mono); font-size: 13px; color: var(--tinta-3); }
+.lista {
+  list-style: none; margin: 0; padding: 0; background: var(--superficie);
+  border-radius: 12px; box-shadow: 0 0 0 1px var(--borde-tarjeta);
+}
+.lista li {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; align-items: center;
+  min-height: 44px; margin-left: 16px; padding: 6px 16px 6px 0; box-sizing: border-box;
+}
+.lista li + li { border-top: 1px solid var(--separador); }
+.lista .numero { font-family: var(--mono); font-size: 12px; color: var(--tinta-3); }
+.lista strong { font-weight: 500; }
+.lista span span { display: block; color: var(--tinta-3); }
+.motivo { font-size: 12px; color: var(--tinta-3); }
+
+/* Lista de investigaciones de la carpeta de la aplicación (PRY-20). */
+.lista--investigaciones { margin-top: 22px; }
+.lista--investigaciones li { grid-template-columns: minmax(0, 1fr) auto; min-height: 56px; padding: 8px 16px 8px 0; }
+.lista--investigaciones li > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lista--investigaciones .mono { font-size: 12px; color: var(--tinta-3); }
+.lista--investigaciones form { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }

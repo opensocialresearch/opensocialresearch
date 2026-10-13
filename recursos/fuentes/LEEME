@@ -1,20 +1,13 @@
 Fuentes de la interfaz
 
-Las tres familias del sistema de diseño (docs/diseno/README.md), en WOFF2 y
-con el subconjunto latino, para que la app funcione sin internet. Son los
-archivos que sirve Google Fonts, sin cambios, bajados el 2026-10-12.
+La interfaz usa la fuente del sistema (D-51). Source Serif 4 se sirve aquí,
+en WOFF2 y con el subconjunto latino, solo para lo que la persona escribe y
+lee largo, como las transcripciones y el diseño de la investigación, para que
+la app funcione sin internet. Son los archivos que sirve Google Fonts, sin
+cambios, bajados el 2026-10-12.
 
-  Archivo.woff2               Archivo, variable, ancho 62–125 %, peso 400–700
-  IBMPlexMono-400.woff2       IBM Plex Mono 400
-  IBMPlexMono-500.woff2       IBM Plex Mono 500
-  IBMPlexMono-600.woff2       IBM Plex Mono 600
   SourceSerif4.woff2          Source Serif 4, variable, peso 400–600
   SourceSerif4-Italic.woff2   Source Serif 4 itálica 400
 
-Las tres están bajo la SIL Open Font License 1.1, cuyo texto con el aviso de
-derechos de cada una está en OFL-*.txt.
-
-Mientras el servidor no tenga la cookie de sesión (SRV-04), el navegador no
-puede pedir archivos aparte, así que las páginas llevan las fuentes que usan
-dentro del CSS. bin/fuentes-css genera src/paginas/fuentes.css a partir de
-estos archivos y se vuelve a correr si alguno cambia.
+Está bajo la SIL Open Font License 1.1, cuyo texto con el aviso de derechos
+está en OFL-SourceSerif4.txt.

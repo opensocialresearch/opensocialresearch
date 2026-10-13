@@ -193,10 +193,11 @@ fn armar(raiz: &Path, nombre: &str, momento: &Momento) -> io::Result<()> {
     )
 }
 
-/// Crea el proyecto en `ruta` y lo deja abierto, con su bloqueo.
+/// Crea el proyecto en `ruta`, lo deja abierto con su bloqueo y devuelve su
+/// nombre.
 ///
 /// Si algo falla no queda nada nuevo en la ruta ni a su lado.
-pub fn crear(ruta: &Path, nombre: Option<&str>, momento: &Momento) -> Result<(), Error> {
+pub fn crear(ruta: &Path, nombre: Option<&str>, momento: &Momento) -> Result<String, Error> {
     let nombre = nombre_del_proyecto(ruta, nombre)?;
     comprobar_destino(ruta)?;
     let preparacion = carpeta_padre(ruta).join(format!(".osr-nuevo-{}", std::process::id()));
@@ -206,7 +207,7 @@ pub fn crear(ruta: &Path, nombre: Option<&str>, momento: &Momento) -> Result<(),
         let _ = fs::remove_dir_all(&preparacion);
         return Err(Error::Escritura(ruta.to_path_buf(), error));
     }
-    Ok(())
+    Ok(nombre)
 }
 
 #[cfg(test)]
@@ -307,7 +308,7 @@ mod pruebas {
     fn crea_con_permisos_0700_y_0600() {
         let tmp = tempfile::tempdir().unwrap();
         let raiz = tmp.path().join("estudio");
-        crear(&raiz, None, &momento()).unwrap();
+        assert_eq!(crear(&raiz, None, &momento()).unwrap(), "estudio");
         for carpeta in [
             "",
             "bitacora",

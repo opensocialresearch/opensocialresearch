@@ -82,7 +82,7 @@ fn fijar_permisos(raiz: &Path, carpeta: &Path) {
 /// que git no guarda, las carpetas vacías y los permisos (D-38). No crea el
 /// índice ni el bloqueo, que son de `osr`.
 #[given("una copia del proyecto de prueba")]
-fn copia_del_proyecto(mundo: &mut Mundo) {
+pub(super) fn copia_del_proyecto(mundo: &mut Mundo) {
     assert!(!mundo.proyecto.exists());
     copiar_arbol(&datos_de_prueba().join("proyecto"), &mundo.proyecto);
     for carpeta in CARPETAS_AL_CREAR {
@@ -153,11 +153,22 @@ fn archivo_con_texto(mundo: &mut Mundo, archivo: String, texto: String) {
     fs::write(&archivo, texto).expect("escribir el archivo");
 }
 
-// Solo carpetas bajo `{tmp}`. Las del proyecto, como `origen/` de TRA-10,
-// llegan con sus requisitos, y sus escenarios quedan omitidos (D-20).
-#[given(regex = r#"^se tomó la huella de cada archivo de "(\{tmp\}[^"]*)"$"#)]
+// Solo carpetas bajo `{tmp}` y la carpeta de la aplicación. Las del
+// proyecto, como `origen/` de TRA-10, llegan con sus requisitos, y sus
+// escenarios quedan omitidos (D-20).
+#[given(regex = r#"^se tomó la huella de cada archivo de "(\{tmp\}[^"]*|\{aplicación\})"$"#)]
 fn tomar_huellas(mundo: &mut Mundo, carpeta: String) {
     mundo.huellas = rutas(&mundo.ruta(&carpeta));
+}
+
+#[given(regex = r#"^se tomó la huella de cada archivo de "(\{aplicación\})" como segunda huella$"#)]
+fn tomar_segunda_huella(mundo: &mut Mundo, carpeta: String) {
+    mundo.segunda_huella = rutas(&mundo.ruta(&carpeta));
+}
+
+#[then(expr = "ningún archivo de {string} cambió respecto de la segunda huella")]
+fn sin_cambios_segunda(mundo: &mut Mundo, carpeta: String) {
+    assert_eq!(rutas(&mundo.ruta(&carpeta)), mundo.segunda_huella);
 }
 
 /// Monta un tmpfs del tamaño pedido en un espacio de nombres de usuario y de
@@ -176,6 +187,7 @@ fn disco_de_prueba(mundo: &mut Mundo, carpeta: String, kib: u32) {
 }
 
 #[given(expr = "la carpeta {string} está vacía")]
+#[then(expr = "la carpeta {string} está vacía")]
 fn carpeta_esta_vacia(mundo: &mut Mundo, carpeta: String) {
     assert!(esta_vacia(&mundo.ruta(&carpeta)));
 }
@@ -526,6 +538,14 @@ fn sin_el_texto(mundo: &mut Mundo, archivo: String, texto: String) {
 fn primera_linea(mundo: &mut Mundo, archivo: String, linea: String) {
     let contenido = fs::read_to_string(mundo.ruta(&archivo)).expect("leer el archivo");
     assert_eq!(contenido.lines().next(), Some(linea.as_str()));
+}
+
+/// La copia del proyecto de prueba con otra versión del formato, que
+/// `osr` no abre (PRY-03, PRY-20.2).
+#[given("una copia del proyecto de prueba con version_formato 2")]
+pub(super) fn copia_con_otra_version(mundo: &mut Mundo) {
+    copia_del_proyecto(mundo);
+    cambia_clave(mundo, "version_formato".into(), "2".into());
 }
 
 #[given("no hay ninguna preparación adicional")]

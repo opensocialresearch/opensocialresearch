@@ -180,6 +180,29 @@ pub fn evento_readme_guardado(fecha: &str, archivo: &str) -> String {
     )
 }
 
+/// El detalle de `diseno_guardado`, con el número del paso y sin su texto.
+#[derive(Serialize)]
+struct DisenoGuardado<'a> {
+    paso: &'a str,
+}
+
+/// La línea `diseno_guardado` (DIS-04).
+pub fn evento_diseno_guardado(fecha: &str, paso: &str) -> String {
+    evento(fecha, "diseno_guardado", DisenoGuardado { paso })
+}
+
+/// El detalle de `diseno_revisado`, con el paso y si quedó revisado.
+#[derive(Serialize)]
+struct DisenoRevisado<'a> {
+    paso: &'a str,
+    revisado: bool,
+}
+
+/// La línea `diseno_revisado` (DIS-05).
+pub fn evento_diseno_revisado(fecha: &str, paso: &str, revisado: bool) -> String {
+    evento(fecha, "diseno_revisado", DisenoRevisado { paso, revisado })
+}
+
 /// `.osr/bloqueo`, con el número del proceso y su inicio (PRY-05).
 pub fn bloqueo(pid: u32, inicio: &str) -> String {
     format!("pid = {pid}\ninicio = {inicio}\n")
@@ -268,6 +291,27 @@ herramienta la reconstruye.
 - Borrar un archivo en un disco SSD no garantiza que sea irrecuperable, por lo
   que el disco tiene que estar cifrado.
 "
+    )
+}
+
+/// El README con las filas de `diseno/` si el proyecto ya tiene diseño
+/// (PRY-16, DIS-06).
+pub fn readme_con(nombre: &str, hoy: &str, con_diseno: bool) -> String {
+    let base = readme(nombre, hoy);
+    if !con_diseno {
+        return base;
+    }
+    base.replacen(
+        "| `.osr/` | El índice interno",
+        "| `diseno/` | El diseño de la investigación, un archivo por paso | de trabajo |\n| `.osr/` | El índice interno",
+        1,
+    )
+    .replacen(
+        "| `.osr/indice.sqlite` | SQLite",
+        "| `diseno/*.md` | Markdown | Las respuestas de cada paso del diseño de la investigación | Editor de texto | DIS-06 |\n\
+         | `diseno/estado.toml` | TOML 1.0 | Cuándo se guardó y se revisó cada paso del diseño | Editor de texto | DIS-06 |\n\
+         | `.osr/indice.sqlite` | SQLite",
+        1,
     )
 }
 
@@ -387,11 +431,36 @@ mod pruebas {
     }
 
     #[test]
+    fn eventos_del_diseno_tienen_el_paso_y_no_el_texto() {
+        assert_eq!(
+            evento_diseno_guardado("2026-10-13T06:00:00-06:00", "01"),
+            "{\"fecha\":\"2026-10-13T06:00:00-06:00\",\"tipo\":\"diseno_guardado\",\"detalle\":{\"paso\":\"01\"}}\n"
+        );
+        assert_eq!(
+            evento_diseno_revisado("f", "02", false),
+            "{\"fecha\":\"f\",\"tipo\":\"diseno_revisado\",\"detalle\":{\"paso\":\"02\",\"revisado\":false}}\n"
+        );
+    }
+
+    #[test]
     fn bloqueo_tiene_pid_e_inicio() {
         assert_eq!(
             bloqueo(42, "2026-10-12T05:00:00-06:00"),
             "pid = 42\ninicio = 2026-10-12T05:00:00-06:00\n"
         );
+    }
+
+    #[test]
+    fn readme_con_diseno_suma_sus_filas() {
+        assert_eq!(
+            readme_con("x", "2026-10-13", false),
+            readme("x", "2026-10-13")
+        );
+        let con = readme_con("x", "2026-10-13", true);
+        assert!(con.contains("| `diseno/` | El diseño de la investigación, un archivo por paso | de trabajo |\n| `.osr/` |"));
+        assert!(con.contains("| `diseno/*.md` | Markdown |"));
+        assert!(con.contains("| `diseno/estado.toml` | TOML 1.0 |"));
+        assert_eq!(con.matches("diseno/").count(), 3);
     }
 
     #[test]

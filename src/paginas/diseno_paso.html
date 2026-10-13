@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{numero}} {{titulo}} · {{nombre}} · Open Social Research</title>
+<link rel="stylesheet" href="/recursos/estilos.css">
+<script src="/recursos/entrada.js"></script>
+<script src="/recursos/diseno.js" defer></script>
+</head>
+<body>
+<header class="barra">
+  <a class="marca" href="/">Open Social Research</a>
+  <span class="barra__proyecto">{{nombre}}</span>
+  <a class="barra__enlace" href="/diseno">Diseño de la investigación</a>
+  <span id="guardado" class="barra__guardado" role="status" aria-live="polite"></span>
+</header>
+<div class="paso-vista">
+  <nav class="pasos-nav" aria-label="Pasos del diseño">
+    <ol>
+{{navegacion}}    </ol>
+  </nav>
+  <main class="paso-centro">
+    {{aviso}}
+    <p class="rotulo">Paso {{numero}} · <span id="estado-paso">{{estado}}</span></p>
+    <h1 class="titulo">{{titulo}}</h1>
+    <form id="paso" data-paso="{{numero}}" data-version="{{version}}">
+{{campos}}      <div class="acciones">
+        <button type="submit" class="boton boton--principal">Guardar</button>
+        <button type="button" id="revision" class="boton" data-revisado="{{revisado}}">{{revision}}</button>
+        <span id="guardado-local" class="motivo" role="status"></span>
+      </div>
+      <div id="paso-error" class="aviso-error" role="alert" hidden><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.6 L10.8 10.2 H1.2 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.4 4.6h1.2v2.8h-1.2zM5.4 8.1h1.2v1.2h-1.2z" fill="currentColor"/></svg><span></span></div>
+    </form>
+    {{siguiente}}
+    <p class="pie">Este diseño se guarda en la carpeta diseno del proyecto, un archivo por paso, que se puede abrir con cualquier editor de texto.</p>
+  </main>
+  <aside class="biblio" aria-labelledby="biblio-t">
+    <h2 id="biblio-t">Qué dice la bibliografía</h2>
+{{citas}}    <h3>Fuentes de las preguntas</h3>
+    <ol class="biblio__fuentes">
+{{fuentes}}    </ol>
+  </aside>
+</div>
+</body>
+</html>

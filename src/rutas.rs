@@ -36,4 +36,20 @@ pub const RUTAS: &[Ruta] = &[
         camino: "/api/proyecto/abrir",
         metodos: &["POST"],
     },
+    Ruta {
+        camino: "/diseno",
+        metodos: &["GET"],
+    },
+    Ruta {
+        camino: "/diseno/{paso}",
+        metodos: &["GET"],
+    },
+    Ruta {
+        camino: "/api/diseno/{paso}",
+        metodos: &["GET", "POST"],
+    },
+    Ruta {
+        camino: "/api/diseno/{paso}/revision",
+        metodos: &["POST"],
+    },
 ];

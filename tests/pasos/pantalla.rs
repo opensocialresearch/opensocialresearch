@@ -56,13 +56,13 @@ impl Mundo {
         assert_eq!(respuesta.estado, 200, "{}", respuesta.cuerpo);
     }
 
-    /// La página `/` de la sesión, con el token.
-    async fn pagina(&self) -> String {
-        let respuesta = Pedido::nuevo("GET", self.direccion("/"))
+    /// Una página de la sesión, con el token.
+    pub(super) async fn pagina_en(&self, camino: &str) -> String {
+        let respuesta = Pedido::nuevo("GET", self.direccion(camino))
             .con_encabezado("Authorization", &format!("Bearer {}", self.token_valido()))
             .mandar()
             .await;
-        assert_eq!(respuesta.estado, 200);
+        assert_eq!(respuesta.estado, 200, "GET {camino}");
         respuesta.cuerpo
     }
 }
@@ -79,7 +79,7 @@ fn sin_entidades(texto: &str) -> String {
 
 /// El texto de la página sin etiquetas, sin código y con los espacios
 /// juntados, como lo leería una persona. Incluye las vistas ocultas.
-fn texto_visible(html: &str) -> String {
+pub(super) fn texto_visible(html: &str) -> String {
     let mut texto = String::new();
     let mut resto = html;
     while let Some(inicio) = resto.find('<') {
@@ -95,7 +95,15 @@ fn texto_visible(html: &str) -> String {
                     .map_or(etiqueta.len(), |fin| fin + cierre.len())
             })
             .unwrap_or_else(|| etiqueta.find('>').map_or(etiqueta.len(), |fin| fin + 1));
-        texto.push(' ');
+        // Las etiquetas de texto en línea no separan palabras; las demás sí.
+        let nombre: String = etiqueta[1..]
+            .trim_start_matches('/')
+            .chars()
+            .take_while(char::is_ascii_alphanumeric)
+            .collect();
+        if !["a", "em", "b", "i"].contains(&nombre.as_str()) {
+            texto.push(' ');
+        }
         resto = &etiqueta[salto..];
     }
     texto.push_str(resto);
@@ -252,8 +260,8 @@ fn cuantas_investigaciones(mundo: &mut Mundo, cantidad: usize) {
 }
 
 #[then(expr = "la página {string} de la sesión lista estas investigaciones en este orden")]
-async fn lista_en_orden(mundo: &mut Mundo, _camino: String, step: &Step) {
-    let visible = texto_visible(&mundo.pagina().await);
+async fn lista_en_orden(mundo: &mut Mundo, camino: String, step: &Step) {
+    let visible = texto_visible(&mundo.pagina_en(&camino).await);
     let mut desde = 0;
     for fila in &step.table.as_ref().expect("falta la tabla").rows[1..] {
         let buscado = format!("{} {}", fila[0].trim(), fila[1].trim());
@@ -265,22 +273,22 @@ async fn lista_en_orden(mundo: &mut Mundo, _camino: String, step: &Step) {
 }
 
 #[then(expr = "la página {string} de la sesión contiene {string}")]
-async fn pagina_contiene(mundo: &mut Mundo, _camino: String, texto: String) {
-    let visible = texto_visible(&mundo.pagina().await);
+async fn pagina_contiene(mundo: &mut Mundo, camino: String, texto: String) {
+    let visible = texto_visible(&mundo.pagina_en(&camino).await);
     let texto = mundo.resolver(&texto);
     assert!(visible.contains(&texto), "falta {texto:?} en {visible:?}");
 }
 
 #[then(expr = "la página {string} de la sesión no contiene {string}")]
-async fn pagina_no_contiene(mundo: &mut Mundo, _camino: String, texto: String) {
-    let visible = texto_visible(&mundo.pagina().await);
+async fn pagina_no_contiene(mundo: &mut Mundo, camino: String, texto: String) {
+    let visible = texto_visible(&mundo.pagina_en(&camino).await);
     let texto = mundo.resolver(&texto);
     assert!(!visible.contains(&texto), "sobra {texto:?} en {visible:?}");
 }
 
 #[then(expr = "la página {string} de la sesión contiene estos textos")]
-async fn pagina_contiene_textos(mundo: &mut Mundo, _camino: String, step: &Step) {
-    let visible = texto_visible(&mundo.pagina().await);
+async fn pagina_contiene_textos(mundo: &mut Mundo, camino: String, step: &Step) {
+    let visible = texto_visible(&mundo.pagina_en(&camino).await);
     for fila in &step.table.as_ref().expect("falta la tabla").rows[1..] {
         let texto = mundo.resolver(fila[0].trim());
         assert!(visible.contains(&texto), "falta {texto:?} en {visible:?}");
@@ -288,8 +296,8 @@ async fn pagina_contiene_textos(mundo: &mut Mundo, _camino: String, step: &Step)
 }
 
 #[then(expr = "la página {string} de la sesión tiene el título {string}")]
-async fn pagina_titulo(mundo: &mut Mundo, _camino: String, titulo: String) {
-    let pagina = mundo.pagina().await;
+async fn pagina_titulo(mundo: &mut Mundo, camino: String, titulo: String) {
+    let pagina = mundo.pagina_en(&camino).await;
     let inicio = pagina.find("<title>").expect("la página no tiene título") + 7;
     let fin = pagina[inicio..]
         .find("</title>")
@@ -299,8 +307,8 @@ async fn pagina_titulo(mundo: &mut Mundo, _camino: String, titulo: String) {
 }
 
 #[then(expr = "la página {string} de la sesión no tiene ningún elemento {string}")]
-async fn pagina_sin_elemento(mundo: &mut Mundo, _camino: String, elemento: String) {
-    let pagina = mundo.pagina().await.to_ascii_lowercase();
+async fn pagina_sin_elemento(mundo: &mut Mundo, camino: String, elemento: String) {
+    let pagina = mundo.pagina_en(&camino).await.to_ascii_lowercase();
     for apertura in [">", " ", "/", "\n", "\t"] {
         let buscada = format!("<{elemento}{apertura}");
         assert!(!pagina.contains(&buscada), "la página tiene {buscada:?}");
@@ -310,9 +318,9 @@ async fn pagina_sin_elemento(mundo: &mut Mundo, _camino: String, elemento: Strin
 #[then(
     expr = "la página {string} de la sesión no contiene ninguno de los nombres de la tabla de correspondencia de prueba"
 )]
-async fn pagina_sin_nombres(mundo: &mut Mundo, _camino: String) {
-    let visible = texto_visible(&mundo.pagina().await).to_lowercase();
-    let pagina = mundo.pagina().await.to_lowercase();
+async fn pagina_sin_nombres(mundo: &mut Mundo, camino: String) {
+    let visible = texto_visible(&mundo.pagina_en(&camino).await).to_lowercase();
+    let pagina = mundo.pagina_en(&camino).await.to_lowercase();
     for nombre in nombres_de_prueba() {
         let nombre = nombre.to_lowercase();
         assert!(

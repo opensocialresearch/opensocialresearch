@@ -4,6 +4,7 @@
 //! otros requisitos y no se cambian para que una prueba pase.
 
 mod archivos;
+mod diseno;
 mod http;
 mod orden;
 mod pantalla;
@@ -101,6 +102,8 @@ pub struct Mundo {
     home: Option<PathBuf>,
     /// La segunda huella de un escenario que compara dos carpetas.
     segunda_huella: BTreeMap<String, Option<Vec<u8>>>,
+    /// La versión de un paso del diseño anotada por el escenario (DIS-04.2).
+    version_anotada: Option<String>,
     /// Los bytes que guardó «se guardó una copia de … como versión editada».
     version_editada: Option<Vec<u8>>,
 }
@@ -144,6 +147,7 @@ impl Mundo {
             umask: None,
             home: None,
             segunda_huella: BTreeMap::new(),
+            version_anotada: None,
             version_editada: None,
         }
     }
@@ -213,6 +217,31 @@ impl Mundo {
         texto = texto.replace("{120 veces la letra a}", &"a".repeat(120));
         texto = texto.replace("{60 veces la letra a}", &"a".repeat(60));
         texto = texto.replace("{aplicación}", &self.aplicacion().to_string_lossy());
+        texto = texto.replace("{año con la ñ descompuesta}", "an\u{303}o");
+        texto = texto.replace(
+            "{hoy}",
+            &jiff::Zoned::now().strftime("%Y-%m-%d").to_string(),
+        );
+        texto = texto.replace("{salto de línea}", "\n");
+        if texto.contains("{hoy en palabras}") {
+            const MESES: [&str; 12] = [
+                "enero",
+                "febrero",
+                "marzo",
+                "abril",
+                "mayo",
+                "junio",
+                "julio",
+                "agosto",
+                "septiembre",
+                "octubre",
+                "noviembre",
+                "diciembre",
+            ];
+            let hoy = jiff::Zoned::now();
+            let palabras = format!("{} de {}", hoy.day(), MESES[hoy.month() as usize - 1]);
+            texto = texto.replace("{hoy en palabras}", &palabras);
+        }
         texto = texto.replace("{Uno, salto de línea, Dos}", "Uno\nDos");
         if let Some(primero) = self.anteriores.first() {
             texto = texto.replace("{PID del primer proceso}", &primero.id().to_string());

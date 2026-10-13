@@ -53,7 +53,7 @@ impl fmt::Display for Error {
 }
 
 /// Agrega una línea al registro de eventos y la lleva a disco (PRY-12).
-fn anotar(raiz: &Path, linea: &str) -> io::Result<()> {
+pub fn anotar(raiz: &Path, linea: &str) -> io::Result<()> {
     let mut registro = fs::OpenOptions::new()
         .append(true)
         .open(raiz.join("bitacora/registro.jsonl"))?;

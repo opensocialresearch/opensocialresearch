@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diseño de la investigación · {{nombre}} · Open Social Research</title>
+<link rel="stylesheet" href="/recursos/estilos.css">
+<script src="/recursos/entrada.js"></script>
+</head>
+<body>
+<header class="barra">
+  <a class="marca" href="/">Open Social Research</a>
+  <span class="barra__proyecto">{{nombre}}</span>
+</header>
+<main class="resumen">
+  <div>
+    <div>
+      <p class="rotulo">Diseño de la investigación</p>
+      <h1 class="titulo">{{nombre}}</h1>
+      <p class="entrada">El diseño se escribe en espiral: los pasos tienen un orden sugerido, pero se puede volver a cualquiera cuando haga falta.</p>
+      <p class="entrada">En un diseño participativo, estos pasos se pueden escribir con las personas participantes.</p>
+    </div>
+    <ol class="lista lista--pasos">
+{{pasos}}    </ol>
+    <p class="pie">Este diseño se guarda en la carpeta diseno del proyecto, un archivo por paso, que se puede abrir con cualquier editor de texto.</p>
+  </div>
+</main>
+</body>
+</html>

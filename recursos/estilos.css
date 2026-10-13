@@ -176,3 +176,77 @@ a { color: var(--acento); }
 .lista--investigaciones li > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lista--investigaciones .mono { font-size: 12px; color: var(--tinta-3); }
 .lista--investigaciones form { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+/* Diseño de la investigación (DIS). Etiquetas de estado con ícono y texto;
+   el tinte refuerza, nunca reemplaza al texto. */
+a.marca { color: var(--tinta); text-decoration: none; }
+.barra__proyecto { color: var(--tinta-2); text-decoration: none; }
+.barra__guardado { margin-left: auto; font-size: 12px; color: var(--tinta-2); }
+.etiqueta {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border-radius: 11px;
+  font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--relleno); color: var(--tinta-2);
+}
+.etiqueta--borrador { background: var(--acento-suave); color: var(--acento); }
+.etiqueta--revisado { background: var(--exito-suave); color: var(--exito); }
+.etiqueta--coherencia { background: var(--aviso-suave); color: var(--aviso); }
+.lista--pasos li { padding: 0; }
+.lista--pasos a {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  min-height: 64px; padding: 12px 16px 12px 0; box-sizing: border-box; color: var(--tinta); text-decoration: none;
+}
+.lista--pasos li { display: block; }
+.paso__texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.paso__texto strong { font-size: 15px; font-weight: 600; }
+.paso__linea { font-size: 13px; color: var(--tinta-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.paso__linea--vacia { color: var(--tinta-3); }
+
+/* Un paso: navegación, escritura y bibliografía. */
+.paso-vista {
+  flex: 1; display: grid; grid-template-columns: 200px minmax(0, 1fr) 320px; gap: 24px;
+  padding: 24px 32px 40px; box-sizing: border-box; align-items: start;
+}
+/* El panel queda a la derecha también en 1366 px (DIS-04); solo una ventana
+   más angosta lo baja debajo de las respuestas. */
+@media (max-width: 1199px) { .paso-vista { grid-template-columns: 200px minmax(0, 1fr); } .biblio { grid-column: 2; max-width: 640px; } }
+.pasos-nav ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pasos-nav a {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 4px 8px; padding: 8px 10px; border-radius: 10px;
+  color: var(--tinta); text-decoration: none; font-size: 13px;
+}
+.pasos-nav a[aria-current="page"] { background: var(--relleno-2); }
+.pasos-nav .numero { font-family: var(--mono); color: var(--tinta-3); }
+.pasos-nav .etiqueta { grid-column: 2; justify-self: start; }
+.paso-centro { display: flex; flex-direction: column; gap: 4px; max-width: 680px; }
+.paso-centro form { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+.campo-escritura {
+  width: 100%; max-width: 640px; min-height: 96px; box-sizing: border-box; padding: 12px 16px;
+  font-family: var(--serif); font-size: 16.5px; line-height: 1.55; color: var(--tinta);
+  background: var(--superficie); border: 1px solid var(--borde-tarjeta); border-radius: 10px; resize: vertical;
+  field-sizing: content;
+}
+.campo-escritura:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--acento-relleno), 0 0 0 4px var(--acento-suave); }
+.aviso {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
+  background: var(--relleno); font-size: 13px; color: var(--tinta-2); margin-bottom: 12px;
+}
+.biblio {
+  background: var(--superficie); border-radius: 12px; box-shadow: 0 0 0 1px var(--borde-tarjeta);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 16px;
+}
+.biblio h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.biblio figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.biblio__cita { margin: 0; font-family: var(--serif); font-style: italic; font-size: 15px; line-height: 1.5; color: var(--tinta); }
+.biblio__ref { font-size: 12px; color: var(--tinta-3); }
+
+a.boton { text-decoration: none; }
+.barra__enlace { color: var(--acento); text-decoration: none; }
+.paso-centro .campo { max-width: 640px; }
+.siguiente { margin-top: 24px; color: var(--acento); text-decoration: none; font-weight: 500; }
+.siguiente::after { content: " →"; }
+.paso-centro .pie { margin-top: 32px; }
+.carpeta-prevista { font-family: var(--mono); color: var(--tinta-2); }
+.lista--diseno .etiqueta { justify-self: end; }
+.lista--diseno li { grid-template-columns: 24px minmax(0, 1fr) auto; }
+.biblio h3 { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+.biblio__fuentes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; color: var(--tinta-2); }
+.biblio__fuentes li span { display: block; }

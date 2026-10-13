@@ -65,7 +65,9 @@ impl Mundo {
 // Solo los caminos de las familias que ya existen, la entrada, una ruta
 // inexistente y el audio de una entrevista. Los de `/respaldo/` quedan sin
 // definir hasta PAR-08 (D-20).
-#[given(regex = r#"^un pedido HTTP ([A-Z]+) a "(/|/\?token=[^"]*|/no-existe|/audio/[A-Z0-9]+)"$"#)]
+#[given(
+    regex = r#"^un pedido HTTP ([A-Z]+) a "(/|/\?token=[^"]*|/no-existe|/audio/[A-Z0-9]+|/diseno)"$"#
+)]
 fn pedido_a(mundo: &mut Mundo, metodo: String, camino: String) {
     let direccion = mundo.direccion(&camino);
     mundo.nuevo_pedido(&metodo, direccion);

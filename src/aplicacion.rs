@@ -52,7 +52,10 @@ pub fn simplificar(nombre: &str) -> String {
             guion = true;
         }
     }
-    simple.truncate(LARGO_MAXIMO);
+    if simple.len() > LARGO_MAXIMO {
+        let corte = simple[..=LARGO_MAXIMO].rfind('-').unwrap_or(LARGO_MAXIMO);
+        simple.truncate(corte);
+    }
     let simple = simple.trim_end_matches('-');
     if simple.is_empty() {
         SIN_LETRAS.to_string()
@@ -161,6 +164,22 @@ mod pruebas {
         assert_eq!(simplificar(&"a".repeat(120)), "a".repeat(60));
         let corte = format!("{}-b", "a".repeat(59));
         assert_eq!(simplificar(&corte), "a".repeat(59), "sin guion al final");
+        let largo = "Percepción de inseguridad al caminar por el centro de San José de noche";
+        assert_eq!(
+            simplificar(largo),
+            "percepcion-de-inseguridad-al-caminar-por-el-centro-de-san",
+            "corta en el último guion, sin partir palabras"
+        );
+        assert_eq!(
+            simplificar(&format!("{} b", "a".repeat(60))),
+            "a".repeat(60)
+        );
+        assert_eq!(
+            simplificar(&format!("{} b", "a".repeat(61))),
+            "a".repeat(60)
+        );
+        let justo = format!("{}-{}", "a".repeat(30), "b".repeat(29));
+        assert_eq!(simplificar(&justo), justo, "60 caracteres no se cortan");
     }
 
     #[test]

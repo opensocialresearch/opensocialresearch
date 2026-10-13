@@ -29,7 +29,11 @@ fn es_propio(raiz: &Path, actual: &[u8], nombre: &str) -> bool {
     std::str::from_utf8(actual)
         .ok()
         .and_then(fecha_de)
-        .is_some_and(|fecha| plantillas::readme(nombre, fecha).as_bytes() == actual)
+        .is_some_and(|fecha| {
+            [false, true].iter().any(|&con_diseno| {
+                plantillas::readme_con(nombre, fecha, con_diseno).as_bytes() == actual
+            })
+        })
 }
 
 /// Escribe el README de hoy y lo anota en el índice. Si el que había lo
@@ -46,7 +50,8 @@ pub fn regenerar(raiz: &Path, nombre: &str, momento: &Momento) -> io::Result<Opt
         Err(error) if error.kind() == io::ErrorKind::NotFound => None,
         Err(error) => return Err(error),
     };
-    let nuevo = plantillas::readme(nombre, &momento.fecha);
+    let con_diseno = raiz.join(crate::diseno::CARPETA).is_dir();
+    let nuevo = plantillas::readme_con(nombre, &momento.fecha, con_diseno);
     escritura::atomica(&ruta, nuevo.as_bytes(), 0o600)?;
     indice::anotar_archivo(raiz, "README.md")?;
     Ok(guardado)

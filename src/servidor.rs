@@ -15,7 +15,7 @@ use crate::abierto::{Abierto, Compartido};
 use crate::api::{self, Falla};
 use crate::nuevo::Momento;
 use crate::rutas::RUTAS;
-use crate::{aplicacion, audio, recursos, registro, resumen, token};
+use crate::{aplicacion, audio, diseno, diseno_web, recursos, registro, resumen, token};
 
 /// La bienvenida del primer uso, con la vista «Primera investigación»
 /// (PRY-23).
@@ -304,6 +304,78 @@ fn accion(
     })
 }
 
+/// Un 404 sin cuerpo para una página que no existe.
+fn no_existe() -> Response {
+    StatusCode::NOT_FOUND.into_response()
+}
+
+/// Una respuesta JSON de la API del diseño.
+fn json(respuesta: diseno_web::Respuesta) -> Response {
+    let (estado, cuerpo) = respuesta;
+    let estado = StatusCode::from_u16(estado).expect("estado HTTP válido");
+    (estado, [(header::CONTENT_TYPE, "application/json")], cuerpo).into_response()
+}
+
+/// La vista general del diseño del proyecto abierto (DIS-03).
+fn vista_del_diseno(abierto: Compartido, filtro: MethodFilter) -> MethodRouter {
+    on(filtro, move || async move {
+        match abierto.actual() {
+            Some(proyecto) => {
+                Html(diseno_web::vista(&proyecto.carpeta, &proyecto.nombre)).into_response()
+            }
+            None => no_existe(),
+        }
+    })
+}
+
+/// La página de un paso del diseño (DIS-04).
+fn paso_del_diseno(abierto: Compartido, filtro: MethodFilter) -> MethodRouter {
+    on(
+        filtro,
+        move |extract::Path(numero): extract::Path<String>| async move {
+            match (abierto.actual(), diseno::paso(&numero)) {
+                (Some(proyecto), Some(paso)) => Html(diseno_web::pagina(
+                    &proyecto.carpeta,
+                    &proyecto.nombre,
+                    paso,
+                ))
+                .into_response(),
+                _ => no_existe(),
+            }
+        },
+    )
+}
+
+/// Qué hace un pedido a la API de un paso.
+type AccionDelDiseno = fn(&Compartido, &diseno::Paso, &[u8], &Momento) -> diseno_web::Respuesta;
+
+/// La API de un paso: leer con GET, y guardar o revisar con POST, aparte
+/// porque escriben en el disco.
+fn api_del_diseno(
+    abierto: Compartido,
+    filtro: MethodFilter,
+    hacer: Option<AccionDelDiseno>,
+) -> MethodRouter {
+    on(
+        filtro,
+        move |extract::Path(numero): extract::Path<String>, cuerpo: axum::body::Bytes| async move {
+            let Some(paso) = diseno::paso(&numero) else {
+                let cuerpo = r#"{"error":"no_existe","mensaje":"Ese paso del diseño no existe."}"#;
+                return json((404, cuerpo.to_string()));
+            };
+            let Some(hacer) = hacer else {
+                return json(diseno_web::leer(&abierto, paso));
+            };
+            let respuesta = tokio::task::spawn_blocking(move || {
+                hacer(&abierto, paso, &cuerpo, &Momento::ahora())
+            })
+            .await
+            .expect("la acción no termina en pánico");
+            json(respuesta)
+        },
+    )
+}
+
 /// El manejador de un camino de `RUTAS` para un método.
 fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter {
     match camino {
@@ -313,6 +385,17 @@ fn atender(camino: &str, filtro: MethodFilter, sesion: &Sesion) -> MethodRouter 
             |extract::Path(camino): extract::Path<String>| async move { recursos::servir(&camino) },
         ),
         "/audio/{entrevista}" => audio(sesion.abierto.clone(), filtro),
+        "/diseno" => vista_del_diseno(sesion.abierto.clone(), filtro),
+        "/diseno/{paso}" => paso_del_diseno(sesion.abierto.clone(), filtro),
+        "/api/diseno/{paso}" if filtro == MethodFilter::GET => {
+            api_del_diseno(sesion.abierto.clone(), filtro, None)
+        }
+        "/api/diseno/{paso}" => {
+            api_del_diseno(sesion.abierto.clone(), filtro, Some(diseno_web::guardar))
+        }
+        "/api/diseno/{paso}/revision" => {
+            api_del_diseno(sesion.abierto.clone(), filtro, Some(diseno_web::revisar))
+        }
         "/api/proyecto/crear" => accion(
             sesion.abierto.clone(),
             sesion.casa.clone(),
@@ -1083,12 +1166,14 @@ mod pruebas {
 
     /// Un camino concreto para un patrón de axum, con `E01` en cada segmento
     /// variable, como lo arma la prueba de SRV-10, salvo el comodín de
-    /// `/recursos/`, que lleva un recurso que existe.
+    /// `/recursos/`, que lleva un recurso que existe, y el paso del diseño,
+    /// que lleva uno de los cinco.
     fn camino_concreto(patron: &str) -> String {
         patron
             .split('/')
             .map(|parte| match parte {
                 "{*camino}" => "estilos.css",
+                "{paso}" => "01",
                 variable if variable.starts_with('{') => "E01",
                 fijo => fijo,
             })

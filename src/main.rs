@@ -8,6 +8,8 @@ mod arranque;
 mod audio;
 mod bloqueo;
 mod cierre;
+mod diseno;
+mod diseno_web;
 mod escritura;
 mod escucha;
 mod estado;

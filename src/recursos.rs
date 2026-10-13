@@ -24,11 +24,12 @@ macro_rules! recurso {
     };
 }
 
-const RECURSOS: [Recurso; 6] = [
+const RECURSOS: [Recurso; 7] = [
     recurso!("estilos.css", "text/css; charset=utf-8"),
     recurso!("entrada.js", "text/javascript; charset=utf-8"),
     recurso!("inicio.js", "text/javascript; charset=utf-8"),
     recurso!("bienvenida.js", "text/javascript; charset=utf-8"),
+    recurso!("diseno.js", "text/javascript; charset=utf-8"),
     recurso!("fuentes/SourceSerif4.woff2", "font/woff2"),
     recurso!("fuentes/SourceSerif4-Italic.woff2", "font/woff2"),
 ];
@@ -88,6 +89,8 @@ mod pruebas {
         for pagina in [
             include_str!("paginas/inicio.html"),
             include_str!("paginas/bienvenida.html"),
+            include_str!("paginas/diseno.html"),
+            include_str!("paginas/diseno_paso.html"),
             include_str!("paginas/resumen.html"),
         ] {
             for pedido in pagina.split("\"/recursos/").skip(1) {

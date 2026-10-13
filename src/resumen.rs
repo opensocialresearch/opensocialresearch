@@ -10,6 +10,7 @@ use std::path::Path;
 
 use crate::abierto::Abierto;
 use crate::aplicacion::Investigacion;
+use crate::diseno::{self, Estado};
 
 const PAGINA: &str = include_str!("paginas/resumen.html");
 const INICIO: &str = include_str!("paginas/inicio.html");
@@ -54,7 +55,7 @@ pub fn vacio(carpeta: &Path) -> bool {
 
 /// La plantilla con cada `{{clave}}` reemplazada por su valor, en una sola
 /// pasada, así un valor que contenga otra marca no se vuelve a reemplazar.
-fn llenar(plantilla: &str, valores: &[(&str, &str)]) -> String {
+pub fn llenar(plantilla: &str, valores: &[(&str, &str)]) -> String {
     let mut lleno = String::with_capacity(plantilla.len());
     let mut resto = plantilla;
     while let Some(inicio) = resto.find("{{") {
@@ -75,8 +76,41 @@ fn llenar(plantilla: &str, valores: &[(&str, &str)]) -> String {
     lleno
 }
 
+/// Las filas de los cinco pasos del diseño en el resumen, con su estado si
+/// el diseño ya empezó (D-55).
+fn pasos_del_diseno(estados: &[Estado], en_diseno: bool) -> String {
+    diseno::PASOS
+        .iter()
+        .zip(estados)
+        .map(|(paso, estado)| {
+            let etiqueta = if en_diseno {
+                format!(
+                    "<span class=\"etiqueta etiqueta--{}\"><span aria-hidden=\"true\">{}</span> {}</span>",
+                    estado.clave(),
+                    estado.icono(),
+                    estado.texto()
+                )
+            } else {
+                String::new()
+            };
+            format!(
+                "        <li><span class=\"numero\">{}</span><strong>{}</strong>{etiqueta}</li>\n",
+                paso.numero,
+                escapar(paso.titulo)
+            )
+        })
+        .collect()
+}
+
 /// La página del resumen del proyecto abierto.
 pub fn pagina(abierto: &Abierto) -> String {
+    let estados = diseno::estados(&abierto.carpeta);
+    let en_diseno = estados.iter().any(|estado| *estado != Estado::SinEmpezar);
+    let (rotulo, accion) = if en_diseno {
+        ("Proyecto en diseño", "Seguir el diseño")
+    } else {
+        ("Proyecto nuevo", "Empezar el diseño")
+    };
     let bloque = if vacio(&abierto.carpeta) {
         VACIO
     } else {
@@ -84,7 +118,17 @@ pub fn pagina(abierto: &Abierto) -> String {
     };
     let nombre = escapar(&abierto.nombre);
     let carpeta = escapar(&abierto.carpeta.to_string_lossy());
-    let bloque = llenar(bloque, &[("nombre", &nombre), ("carpeta", &carpeta)]);
+    let pasos = pasos_del_diseno(&estados, en_diseno);
+    let bloque = llenar(
+        bloque,
+        &[
+            ("nombre", &nombre),
+            ("carpeta", &carpeta),
+            ("rotulo", rotulo),
+            ("accion_diseno", accion),
+            ("pasos_diseno", &pasos),
+        ],
+    );
     llenar(PAGINA, &[("bloque", &bloque), ("nombre", &nombre)])
 }
 

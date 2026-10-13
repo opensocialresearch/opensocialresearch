@@ -79,3 +79,31 @@ for (const formulario of document.querySelectorAll("form[data-accion]")) {
     enviar(formulario);
   });
 }
+
+// El nombre simplificado de la carpeta, como lo calcula osr (PRY-24): sin
+// marcas diacríticas, en minúsculas, con guiones y cortado en un guion antes
+// de los 60 caracteres. Se muestra mientras se escribe (D-55).
+function simplificar(nombre) {
+  let simple = nombre
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (simple.length > 60) {
+    const corte = simple.slice(0, 61).lastIndexOf("-");
+    simple = simple.slice(0, corte > 0 ? corte : 60);
+  }
+  simple = simple.replace(/-+$/, "");
+  return simple || "investigacion";
+}
+
+for (const campo of document.querySelectorAll("input[name=nombre]")) {
+  const prevista = campo.closest(".campo").querySelector(".carpeta-prevista");
+  if (!prevista) continue;
+  const mostrar = () => {
+    prevista.textContent = campo.value.trim() ? simplificar(campo.value) : "";
+  };
+  campo.addEventListener("input", mostrar);
+  mostrar();
+}

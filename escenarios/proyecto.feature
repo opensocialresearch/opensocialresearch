@@ -1089,7 +1089,7 @@ Característica: Proyecto en el disco
         | Diseño de la investigación                                                                                                                        |
         | Tema e interés                                                                                                                                    |
         | Posicionamiento y supuestos                                                                                                                       |
-        | Problema y estado de la cuestión                                                                                                                  |
+        | Problema, estado de la cuestión y marco teórico                                                                                                   |
         | Pregunta y objetivos                                                                                                                              |
         | Enfoque, metodología y métodos                                                                                                                    |
         | Empezar el diseño                                                                                                                                 |
@@ -1148,7 +1148,7 @@ Característica: Proyecto en el disco
         | Primera investigación                                                                         |
         | Para empezar, hay que ponerle nombre a la investigación.                                      |
         | Todo lo que se registre queda en la carpeta Open Social Research de esta computadora, en archivos de texto abierto que se pueden leer sin la herramienta. |
-        | La carpeta de la investigación lleva este nombre, sin tildes ni espacios.                     |
+        | Se puede escribir con tildes y espacios. La carpeta se va a llamar:                           |
       Y la página "/" de la sesión no contiene "Investigaciones"
 
     @PRY-23.2

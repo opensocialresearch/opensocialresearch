@@ -787,8 +787,8 @@ el formulario de PRY-19, con el título `Nueva investigación`. La pantalla
 lleva el rótulo `Sin investigación abierta`, el texto `Están en la carpeta
 Open Social Research de esta computadora, en archivos de texto abierto que se
 pueden leer sin la herramienta.` y el pie `Todo queda en esta computadora.
-Sin cuentas ni conexión a internet. Un proyecto en otra carpeta se abre con
-osr abrir <carpeta> en la terminal.`
+Sin cuentas ni conexión a internet.` La orden `osr abrir <carpeta>` para un
+proyecto de otra carpeta se explica en el README, no en la pantalla (D-55).
 
 Pulsar `Abrir` manda a la API la acción de abrir con el nombre de la
 subcarpeta, y la app abre el proyecto como `osr abrir` (PRY-04), en el mismo
@@ -876,7 +876,8 @@ pregunta y el enfoque. Van en espiral: se puede volver a cualquier paso cuando
 haga falta.` Debajo van dos grupos numerados.
 
 1. `Diseño de la investigación`, con sus cinco pasos, `Tema e interés`,
-   `Posicionamiento y supuestos`, `Problema y estado de la cuestión`,
+   `Posicionamiento y supuestos`, `Problema, estado de la cuestión y marco
+   teórico`,
    `Pregunta y objetivos` y `Enfoque, metodología y métodos`, y el botón
    `Empezar el diseño`.
 2. `Trabajo de campo`, con sus tres pasos y el botón `Agregar participante`.
@@ -890,9 +891,9 @@ haga falta.` Debajo van dos grupos numerados.
    Nota del grupo: `Se puede empezar en cualquier momento; el diseño se puede
    revisar después.`
 
-Mientras el diseño de la investigación y el registro de participantes no
-estén implementados, los dos botones quedan inactivos y cada uno muestra al
-lado `Todavía no se hace desde aquí.`
+`Empezar el diseño` lleva a la vista general del diseño (DIS-03). Mientras el
+registro de participantes no esté implementado, `Agregar participante` queda
+inactivo y muestra al lado `Todavía no se hace desde aquí.`
 
 El orden y la espiral siguen la revisión de la bibliografía del curso de
 D-49. La investigación «se inicia con un conjunto de consideraciones acerca
@@ -903,9 +904,15 @@ ordenada» (Villalobos, 2017, p. 274), y se elige «un enfoque, una metodología
 y los métodos específicos que mejor se ajusten a las preguntas» (Della Porta
 y Keating, 2013, p. 339).
 
+**Proyecto en diseño.** Un proyecto vacío con algún paso del diseño con texto
+lleva el rótulo `Proyecto en diseño`, el botón `Seguir el diseño` en lugar de
+`Empezar el diseño`, y en cada paso del grupo 1 su estado (DIS-05), para que
+quien vuelve vea que su trabajo está (D-55).
+
 **Proyecto con datos.** El rótulo es `Proyecto abierto`, seguido de `Este
 proyecto ya tiene participantes o entrevistas. Esta versión todavía no los
-muestra aquí; están en la carpeta del proyecto.`
+muestra aquí; están en la carpeta del proyecto.` y del enlace `Ver el diseño de la
+investigación` a la vista general del diseño (DIS-03).
 
 El nombre y la carpeta se muestran como texto, nunca como código de la
 página. El resumen no muestra nada de `identificable/` ni nada que cambie
@@ -922,6 +929,9 @@ entre dos aperturas sin cambios en los archivos, como la hora o el puerto.
   contiene ninguno de los nombres de la tabla de correspondencia de prueba.
 - PRY-22.4 Un proyecto creado con el nombre `<b>Estudio</b> & otro` muestra
   ese texto tal cual en el título, y la página no tiene ningún elemento `b`.
+- PRY-22.5 Con un paso del diseño guardado, el resumen de un proyecto sin
+  participantes muestra `Proyecto en diseño`, `Seguir el diseño` y el estado
+  de cada paso.
 
 ### PRY-23 Bienvenida del primer uso [D-50, D-53]
 
@@ -944,8 +954,9 @@ PRY-20 sino la bienvenida, en dos vistas de la misma página.
    de texto abierto que se pueden leer sin la herramienta.` y el formulario de
    PRY-19 con el foco en `Nombre de la investigación`.
 
-El campo lleva la ayuda `La carpeta de la investigación lleva este nombre,
-sin tildes ni espacios.` Pulsar `Iniciar` y cerrar sin crear no escribe nada,
+El campo lleva la ayuda `Se puede escribir con tildes y espacios. La carpeta
+se va a llamar:` seguida del nombre simplificado de PRY-24, que se actualiza
+mientras se escribe (D-55). Pulsar `Iniciar` y cerrar sin crear no escribe nada,
 y la próxima vez sale de nuevo la bienvenida.
 
 **Criterios de aceptación.**
@@ -978,7 +989,9 @@ La subcarpeta de cada investigación es su nombre simplificado.
 3. Cada tramo de caracteres que no son letras de la `a` a la `z` ni cifras
    se reemplaza por un guion, y se quitan los guiones del principio y del
    final.
-4. Se recorta a 60 caracteres, sin dejar un guion al final.
+4. Si pasa de 60 caracteres, se recorta en el último guion antes del
+   carácter 61, así no queda una palabra partida; si no hay guion, se recorta
+   a 60.
 5. Si queda vacío, la subcarpeta es `investigacion`.
 6. Si ya existe algo con ese nombre en la carpeta de la aplicación, se
    agrega `-2`, `-3` y así hasta encontrar uno libre.

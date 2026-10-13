@@ -4,7 +4,84 @@ Registro de las decisiones del proyecto, de la más reciente a la más antigua.
 Cada cambio de alcance, de umbral, de herramienta o de especificación aprobada
 se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
-## 2026-10-12 · Primer uso, inicio por el diseño y sistema visual nuevo
+## 2026-10-13 · Diseño de la investigación (DIS)
+
+- **D-55.** Lo que cambió por las pruebas de uso. Un tester funcional
+  comprobó los 33 criterios de DIS y de PRY-19 a PRY-24 contra la app real
+  (todos cumplen) y una tester con el perfil de la colega novata hizo el
+  recorrido completo con clics en un navegador. Se decidió, sin consultar a
+  Carlos por su pedido de trabajar solo de noche:
+  - No perder texto: con cambios sin guardar, la página lo dice (`Hay cambios
+    sin guardar`), salir pide confirmación del navegador y `Marcar como
+    revisado` guarda primero. Después de guardar se ve `Guardado a las
+    <HH:MM>` junto a los botones y las etiquetas se actualizan sin recargar.
+  - Una línea de una respuesta que empieza con `## ` se escribía como otra
+    sección y se perdía de la pantalla y se duplicaba; ahora se escribe con
+    una barra invertida delante y se lee de vuelta. Se descartó rechazarla con
+    un error, que le pediría a la persona entender Markdown.
+  - Coherencia: la metodóloga del panel pidió que vaya en las dos direcciones
+    (D-54), y la tester mostró que así avisaba en cada avance de la primera
+    pasada y la persona aprendía a ignorarlo. Se mantienen las dos
+    direcciones, pero solo un paso revisado pide revisar la coherencia y el
+    primer guardado con texto de un paso no la pide a los demás. Un archivo
+    editado fuera de la app vuelve a `En borrador`, y las revisiones que no
+    cambian nada no se anotan.
+  - El resumen de un proyecto con el diseño empezado dice `Proyecto en
+    diseño`, ofrece `Seguir el diseño` y muestra el estado de cada paso.
+  - Tres preguntas llevan una ayuda con opciones de distintas tradiciones; el
+    panel muestra también la fuente de cada pregunta; el aviso de coherencia
+    dice qué hacer, nombra el paso que cambió con un enlace y escribe la fecha
+    en palabras; hay enlace al paso siguiente y un pie que dice dónde se
+    guarda el diseño; el panel queda a la derecha en 1366 px.
+  - El nombre de la carpeta se recorta en el último guion antes de los 60
+    caracteres y se muestra mientras se escribe, con la ayuda «Se puede
+    escribir con tildes y espacios». La orden `osr abrir` sale de la pantalla
+    de la lista. El README lista `diseno/` desde el primer guardado.
+  Quedan para próximos ciclos, de las mismas pruebas: generar el documento de
+  la Tarea 4 de 05645 (portada, problema, objetivos, marco teórico, marco
+  metodológico y bibliografía en APA 7, exportado a Word o PDF con su
+  formato), un lugar para los hallazgos del diagnóstico participativo, la
+  pregunta de procedimiento en el paso 05, el formato de hipótesis nula y
+  alternativa para los diseños cuantitativos, la matriz de coherencia y la
+  referencia APA completa con botón de copiar en el panel.
+
+- **D-54.** Diseño guiado en el tramo 1 de la v0.1. Carlos pidió hacer usable
+  el diseño de la investigación detrás de «Empezar el diseño» y trabajar de
+  noche sin preguntarle, decidiendo con un consejo de expertos y la
+  literatura. PRODUCTO.md lo tenía en la v1.0 («Plantilla `.qmd` para redactar
+  el proyecto», 6.1, y «Plantillas comentadas en español con su fuente
+  citada», 6.7.7); esta decisión lo adelanta al tramo 1 como especificación
+  propia, `especificaciones/diseno.md`. Un panel de tres perfiles revisó la
+  especificación contra la bibliografía del curso y los estándares
+  internacionales y la aprobó con cambios:
+  - metodología cualitativa y mixta: agregar marco teórico, justificación y
+    selección de casos o participantes, corregir la página de Kvale (p. 77) y
+    hacer la coherencia de ida y vuelta (Sautu et al., 2005, p. 34; Kvale,
+    2011, p. 87);
+  - investigación participativa y feminista: preguntar con quiénes se define
+    el problema y qué relación se establece con las participantes, sumar el
+    saber de quienes viven el problema y una pregunta de acuerdos éticos, y
+    equilibrar la cita de Villalobos Zamora sobre el diseño cuantitativo con
+    Pajares Sánchez (2020, p. 302);
+  - estándares internacionales (SRQR, JARS-Qual, JARS-Quant, COREQ, GRAMMS):
+    agregar ya las preguntas que faltan para que el diseño sea reportable,
+    porque cambiarlas después deja respuestas huérfanas, o prever cómo
+    migrar.
+  Se incorporaron todos los cambios obligatorios, y además una regla de
+  migración: las secciones que no son preguntas guía se conservan al
+  reescribir. Las citas nuevas se verificaron contra los textos. Quedan como
+  preguntas abiertas para Carlos, señaladas por el panel de estándares y sin
+  resolver: si la herramienta debe sugerir alguna vez una etiqueta de
+  paradigma u orientación, que SRQR S5 y COREQ 9 piden al publicar, frente a
+  D-49; si el paso 04 se desdobla en objetivos cualitativos, cuantitativos y
+  mixtos cuando el enfoque es mixto, como pide MMARS; y qué estándar alimenta
+  el grupo «Para que sea publicable», donde el panel recomienda SRQR o
+  JARS-Qual antes que COREQ para la reflexividad. Detalles de implementación:
+  el estado de cada paso se calcula de los archivos y de `diseno/estado.toml`,
+  que lleva un número de orden además de la marca de tiempo, porque dos
+  cambios pueden caer en el mismo segundo y la espiral necesita ordenarlos;
+  guardar compara la versión que vio la página con la del disco y no pisa un
+  cambio externo (PRY-14), y guardar lo mismo no escribe nada.
 
 - **D-53.** Sin rutas en la pantalla: carpeta de la aplicación (PRY-24).
   Al probar la pantalla, Carlos pidió que no se le pregunte ninguna carpeta:

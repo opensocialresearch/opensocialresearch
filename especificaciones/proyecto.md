@@ -28,6 +28,7 @@ para que ningún cierre forzado pierda o corrompa datos.
 | 5, terminación | «Cero pérdidas de datos […] incluidos cierres forzados», «El README generado describe cada carpeta y cada tipo de archivo», «la de reconstrucción del índice» | PRY-10, PRY-11, PRY-12, PRY-16 |
 | 9, amenazas | «Laptop robada o perdida» y «Disco de respaldo perdido», cubiertas en la v0.1 por el README | PRY-16 |
 | 6.0 | regla general de bloqueo, «bloquea por defecto y permite una excepción que la persona confirma y que queda registrada» | PRY-09 |
+| 6.0 | «el binario `osr` la abre» y la interfaz sin proyecto que ofrece crear y abrir (SRV-01) | PRY-19, PRY-20, PRY-21, PRY-22, PRY-23 |
 
 ## 2. Definiciones
 
@@ -718,6 +719,264 @@ técnico va solo al registro técnico (SRV-12).
 - PRY-18.2 Al forzar un error de permisos del sistema, el texto visible no
   contiene la palabra `Permission` ni ninguna traza técnica.
 
+### PRY-19 Crear un proyecto desde la pantalla de inicio [D-48]
+
+**Comportamiento.** En la pantalla sin proyecto (SRV-01), el formulario
+«Crear proyecto» tiene los campos `Carpeta nueva o vacía` y `Nombre` y el
+botón `Crear proyecto`. Pulsar el botón, o Enter en cualquiera de los dos
+campos, manda a la API la acción de crear con lo escrito. La app interpreta la
+carpeta según las reglas de la ruta escrita, crea el proyecto como `osr nuevo`
+(PRY-01), con los mismos archivos, los mismos permisos y el mismo único evento
+`proyecto_creado`, y lo deja abierto en el mismo proceso, con su bloqueo
+(PRY-05). La pestaña pasa al resumen del proyecto (PRY-22) sin recargar a mano.
+Mientras espera la respuesta, el botón queda deshabilitado con el texto
+`Creando…`.
+
+**Ruta escrita.** Vale igual para PRY-20.
+
+1. Se quitan los espacios y las tabulaciones del principio y del final.
+2. Un `~` solo, o un `~` al principio seguido de `/`, se reemplaza por la
+   carpeta personal de la cuenta, el `HOME` del proceso `osr`. Un `~` en otra
+   posición queda como está.
+3. El resultado tiene que ser una ruta absoluta. Una ruta relativa se rechaza,
+   porque la persona no ve desde qué carpeta corre `osr`.
+4. La ruta se usa tal cual, sin resolver enlaces simbólicos. Una `/` final no
+   cambia la carpeta.
+
+La ruta que aparece en los mensajes y en el resumen es la del paso 2.
+
+**Entradas.** Un cuerpo JSON `{"ruta": <texto>, "nombre": <texto>}`. Si
+`nombre` falta o es la cadena vacía, el nombre es el último componente de la
+ruta, como `osr nuevo` sin `--nombre`. Los demás límites son los de PRY-01.
+
+**Salidas.** Estado 200 con `{"nombre": <nombre>, "carpeta": <ruta>}`. Desde
+ese momento el proceso tiene el proyecto abierto (PRY-21).
+
+**Errores.** Nada se crea, el proceso sigue sin proyecto y la pantalla de
+inicio permite corregir y volver a intentar. El cuerpo de la respuesta es
+`{"error": <código>, "mensaje": <mensaje>}` y la interfaz muestra el mensaje
+debajo del botón, conservando lo escrito en los campos.
+
+| Condición | Estado | `error` | Mensaje |
+|---|---|---|---|
+| El cuerpo no es JSON, no es un objeto o `ruta` falta o no es texto | 400 | `pedido_invalido` | `El pedido no tiene la forma esperada.` |
+| La ruta queda vacía después del paso 1 | 422 | `ruta_vacia` | `Hay que escribir la carpeta del proyecto.` |
+| La ruta no es absoluta después del paso 2 | 422 | `ruta_relativa` | `La carpeta tiene que ser una ruta completa, que empiece con / o con ~/.` |
+| Nombre con más de 200 caracteres o con caracteres de control | 422 | `nombre_invalido` | `El nombre del proyecto tiene que tener entre 1 y 200 caracteres, sin saltos de línea.` |
+| La carpeta existe y no está vacía | 409 | `carpeta_ocupada` | `La carpeta <ruta> ya existe y no está vacía. Hay que elegir una carpeta nueva o vacía.` |
+| La carpeta que contendría a la ruta no existe | 422 | `sin_carpeta` | `No existe la carpeta <padre>.` |
+| Sin permiso de escritura o disco lleno | 500 | `escritura` | `No se pudo crear el proyecto en <ruta> (<motivo en español>).` |
+| El proceso ya tiene un proyecto abierto | 409 | `proyecto_ya_abierto` | el de PRY-21 |
+
+**Criterios de aceptación.**
+- PRY-19.1 Con `osr` arrancado sin proyecto, crear en `{tmp}/estudio` con el
+  nombre `Estudio de prueba` responde 200 con ese nombre y esa carpeta, la
+  carpeta tiene exactamente las rutas de PRY-01.1, `.osr/bloqueo` tiene el PID
+  de ese `osr`, el registro de eventos tiene una sola línea, de tipo
+  `proyecto_creado`, y la página `/` muestra `Estudio de prueba`.
+- PRY-19.2 Con `HOME` en `{tmp}/casa`, crear en `~/estudio` crea
+  `{tmp}/casa/estudio`.
+- PRY-19.3 Con el nombre vacío, `proyecto.toml` guarda como nombre el último
+  componente de la ruta.
+- PRY-19.4 Cada fila de la tabla de errores, salvo la de escritura y la de
+  PRY-21, responde su estado, su código y su mensaje, no crea nada y la página
+  `/` sigue mostrando `Sin proyecto abierto`.
+- PRY-19.5 Con la carpeta del paso 2 escrita con espacios alrededor, el
+  proyecto se crea en la carpeta sin esos espacios.
+- PRY-19.6 En Firefox y en Chromium, escribir la carpeta y el nombre y pulsar
+  `Crear proyecto` muestra el resumen con el nombre a más tardar 3 s después.
+- PRY-19.7 En Firefox y en Chromium, una carpeta ocupada muestra su mensaje
+  debajo del botón y los dos campos conservan lo escrito.
+
+### PRY-20 Abrir un proyecto desde la pantalla de inicio [D-48]
+
+**Comportamiento.** En la pantalla sin proyecto, el formulario «Abrir
+proyecto» tiene el campo `Carpeta del proyecto` y el botón `Abrir proyecto`.
+Pulsar el botón, o Enter en el campo, manda a la API la acción de abrir. La
+app interpreta la carpeta con las reglas de la ruta escrita de PRY-19 y abre
+el proyecto como `osr abrir` (PRY-04), en el mismo orden, con la validación de
+`proyecto.toml`, el bloqueo, las reparaciones, la verificación y el README. La
+pestaña pasa al resumen del proyecto (PRY-22). Mientras espera, el botón queda
+deshabilitado con el texto `Abriendo…`.
+
+**Entradas.** Un cuerpo JSON `{"ruta": <texto>}`.
+
+**Salidas.** Estado 200 con `{"nombre": <nombre>, "carpeta": <ruta>}`.
+
+**Errores.** Nada se escribe en la carpeta, el proceso sigue sin proyecto, y
+la respuesta y la interfaz siguen las mismas reglas que en PRY-19.
+
+| Condición | Estado | `error` | Mensaje |
+|---|---|---|---|
+| El cuerpo no tiene la forma esperada | 400 | `pedido_invalido` | `El pedido no tiene la forma esperada.` |
+| La ruta queda vacía | 422 | `ruta_vacia` | `Hay que escribir la carpeta del proyecto.` |
+| La ruta no es absoluta | 422 | `ruta_relativa` | `La carpeta tiene que ser una ruta completa, que empiece con / o con ~/.` |
+| La carpeta no existe | 422 | `sin_carpeta` | `No existe la carpeta <ruta>.` |
+| Alguno de los errores de PRY-03 | 422 | `proyecto_invalido` | El mensaje de PRY-03 sin el prefijo `osr: ` y con mayúscula inicial, por ejemplo `<ruta> no es un proyecto de Open Social Research (falta proyecto.toml).` |
+| Otro proceso tiene el proyecto abierto | 409 | `abierto_en_otro_proceso` | `El proyecto ya está abierto en otro proceso (PID <n>). Hay que usar esa pestaña o cerrar ese proceso.` |
+| No se pudo escribir al abrir | 500 | `escritura` | `No se pudo abrir el proyecto en <ruta> (<motivo en español>).` |
+| El proceso ya tiene un proyecto abierto | 409 | `proyecto_ya_abierto` | el de PRY-21 |
+
+**Criterios de aceptación.**
+- PRY-20.1 Con `osr` arrancado sin proyecto, abrir una copia del proyecto de
+  prueba responde 200 con `Proyecto de prueba inventado`, `.osr/bloqueo` tiene
+  el PID de ese `osr`, el registro de eventos tiene una línea nueva
+  `verificacion` y la página `/` muestra `Proyecto de prueba inventado`.
+- PRY-20.2 Abrir una carpeta que no existe, una carpeta sin `proyecto.toml` y
+  un proyecto con `version_formato = 2` responden 422 con su mensaje, no
+  escriben nada y la página `/` sigue mostrando `Sin proyecto abierto`.
+- PRY-20.3 Con el proyecto abierto en otro `osr`, abrirlo responde 409 con el
+  PID de ese proceso, que sigue atendiendo pedidos.
+- PRY-20.4 En Firefox y en Chromium, escribir la carpeta de la copia del
+  proyecto de prueba y pulsar `Abrir proyecto` muestra el resumen a más tardar
+  3 s después.
+
+### PRY-21 Un proyecto por proceso [D-48]
+
+**Comportamiento.** Un proceso `osr` abre a lo sumo un proyecto y lo mantiene
+hasta terminar, lo haya abierto con `osr abrir`, con `osr nuevo` o desde la
+pantalla de inicio. Con un proyecto abierto, la página `/` muestra su resumen
+y no la pantalla de inicio, y toda acción de crear o de abrir responde 409 con
+`{"error": "proyecto_ya_abierto", "mensaje": "Ya hay un proyecto abierto en
+esta sesión. Para abrir otro hay que cerrar Open Social Research y volver a
+abrirlo."}` sin escribir nada. Si llegan a la vez varias acciones de crear o
+de abrir a un proceso sin proyecto, se atiende una sola y las demás reciben
+ese 409. Cerrar el proceso es SRV-15.
+
+**Criterios de aceptación.**
+- PRY-21.1 Después de crear `{tmp}/uno` desde la pantalla de inicio, crear
+  `{tmp}/dos` responde 409 con el mensaje, `{tmp}/dos` no existe y `{tmp}/uno`
+  sigue abierto con su bloqueo.
+- PRY-21.2 Con un proyecto abierto con `osr abrir`, abrir otro proyecto
+  responde 409 y no escribe nada en ninguno de los dos.
+- PRY-21.3 Diez acciones de crear simultáneas, cada una con una carpeta
+  distinta, dan exactamente una respuesta 200 y nueve 409, y existe
+  exactamente una de las diez carpetas.
+- PRY-21.4 Después de abrir un proyecto desde la pantalla de inicio, SIGTERM
+  termina `osr` con código 0 y no queda `.osr/bloqueo` (SRV-15).
+
+### PRY-22 Resumen del proyecto en el tramo 1 [D-48, D-49]
+
+**Comportamiento.** Con un proyecto abierto, la página `/` es el resumen del
+proyecto (PRY-04). En el tramo 1, hasta que lleguen las listas de PAR-10,
+TRA-03 y TRA-13 y el resultado de PRY-11, el resumen muestra el nombre del
+proyecto como título, la carpeta (la ruta absoluta con la que se abrió) y uno
+de dos bloques. El título de la página es `<nombre> · Open Social Research`.
+
+Un proyecto está vacío cuando `participantes/participantes.csv` no tiene
+ninguna línea con texto después del encabezado y `identificable/entrevistas/`
+no tiene ninguna carpeta. La app solo cuenta esas líneas y esas carpetas, no
+lee su contenido.
+
+**Proyecto vacío.** El rótulo es `Proyecto nuevo`, seguido de `La carpeta del
+proyecto está lista. Lo primero es el diseño de la investigación.` y de `Antes
+del trabajo de campo se escriben el tema, el posicionamiento, el problema, la
+pregunta y el enfoque. Van en espiral: se puede volver a cualquier paso cuando
+haga falta.` Debajo van dos grupos numerados.
+
+1. `Diseño de la investigación`, con sus cinco pasos, `Tema e interés`,
+   `Posicionamiento y supuestos`, `Problema y estado de la cuestión`,
+   `Pregunta y objetivos` y `Enfoque, metodología y métodos`, y el botón
+   `Empezar el diseño`.
+2. `Trabajo de campo`, con sus tres pasos y el botón `Agregar participante`.
+
+   | Paso | Texto |
+   |---|---|
+   | `Registrar participantes` | `La herramienta genera el seudónimo; el nombre real queda en la Zona identificable.` |
+   | `Registrar su consentimiento` | `Versión del formulario, modalidad, respaldo y alcances.` |
+   | `Importar las entrevistas` | `Audio y archivos de Whisper; después, revisar la transcripción.` |
+
+   Nota del grupo: `Se puede empezar en cualquier momento; el diseño se puede
+   revisar después.`
+
+Mientras el diseño de la investigación y el registro de participantes no
+estén implementados, los dos botones quedan inactivos y cada uno muestra al
+lado `Todavía no se hace desde aquí.`
+
+El orden y la espiral siguen la revisión de la bibliografía del curso de
+D-49. La investigación «se inicia con un conjunto de consideraciones acerca
+de aquella parte del mundo social que se desea estudiar» (Sautu et al., 2005,
+p. 30), y teoría, objetivos y metodología «se piensan en conjunto» (Sautu et
+al., 2005, p. 34). El diseño cualitativo no es «una secuencia lineal y
+ordenada» (Villalobos, 2017, p. 274), y se elige «un enfoque, una metodología
+y los métodos específicos que mejor se ajusten a las preguntas» (Della Porta
+y Keating, 2013, p. 339).
+
+**Proyecto con datos.** El rótulo es `Proyecto abierto`, seguido de `Este
+proyecto ya tiene participantes o entrevistas. Esta versión todavía no los
+muestra aquí; están en la carpeta del proyecto.`
+
+El nombre y la carpeta se muestran como texto, nunca como código de la
+página. El resumen no muestra nada de `identificable/` ni nada que cambie
+entre dos aperturas sin cambios en los archivos, como la hora o el puerto.
+
+**Criterios de aceptación.**
+- PRY-22.1 Después de `osr nuevo`, la página `/` muestra el nombre, la
+  carpeta, `Proyecto nuevo`, los dos grupos con sus pasos, sus textos y sus
+  botones, y no muestra `Sin proyecto abierto`.
+- PRY-22.2 Con una copia del proyecto de prueba abierta con `osr abrir`, la
+  página `/` muestra `Proyecto abierto` y el texto del proyecto con datos, y no
+  muestra `Diseño de la investigación`.
+- PRY-22.3 Con la copia del proyecto de prueba abierta, la página `/` no
+  contiene ninguno de los nombres de la tabla de correspondencia de prueba.
+- PRY-22.4 Un proyecto creado con el nombre `<b>Estudio</b> & otro` muestra
+  ese texto tal cual en el título, y la página no tiene ningún elemento `b`.
+
+### PRY-23 Bienvenida del primer uso [D-50]
+
+**Comportamiento.** Mientras la cuenta no haya creado ni abierto ningún
+proyecto con `osr`, la página `/` sin proyecto abierto no es la pantalla de
+inicio de SRV-01 sino la bienvenida, en dos vistas de la misma página.
+
+1. **Bienvenida.** El título `Open Social Research`, el lema `Investigación
+   social aplicada de punta a punta, desde la primera pregunta hasta la
+   publicación.`, tres rasgos, el botón `Iniciar`, que tiene el foco inicial,
+   y el pie `Versión 0.1 · Nace en el programa de Investigación Social Aplicada
+   de la UNED.` Los rasgos son `Libre` (`Código abierto con licencia MIT, sin
+   licencias que pagar.`), `Local` (`Todo queda en esta computadora, sin
+   cuentas ni conexión a internet.`) y `Pluralista` (`Sirve igual para
+   investigación cualitativa, cuantitativa o mixta.`).
+2. **Primer proyecto.** Pulsar `Iniciar` muestra, sin pedir otra página, el
+   rótulo `Primer proyecto`, el título `Para empezar, hay que crear el primer
+   proyecto.`, el texto `Un proyecto es una carpeta de esta computadora. Todo
+   lo que se registra queda en ella, en archivos de texto abierto que se
+   pueden leer sin la herramienta.`, el formulario `Crear proyecto` de PRY-19
+   con el foco en `Carpeta nueva o vacía`, y debajo `¿Ya existe un proyecto?`
+   con el botón `Abrir un proyecto existente`, que despliega en el mismo lugar
+   el campo `Carpeta del proyecto` y el botón `Abrir proyecto` de PRY-20.
+
+Cada campo de ruta lleva la ayuda `Una ruta completa, que empiece con / o con
+~/.`, la de la carpeta nueva agrega `Si la carpeta no existe, se crea.`, y el
+nombre lleva `Si queda vacío, se usa el nombre de la carpeta.`
+
+**Primer uso.** Después del primer proyecto creado o abierto con éxito, por
+la pantalla o con `osr nuevo` u `osr abrir`, `osr` escribe en su carpeta de
+estado (SRV-12) el archivo `primer-proyecto`, con permisos 0600, que contiene
+solo la marca de tiempo de ese momento y nunca la ruta ni el nombre del
+proyecto. Si el archivo existe, la página `/` sin proyecto es la pantalla de
+inicio de SRV-01. Si no se puede escribir, `osr` sigue y la bienvenida vuelve
+a salir en el próximo arranque. Pulsar `Iniciar` y cerrar sin crear ni abrir
+un proyecto no escribe nada.
+
+**Criterios de aceptación.**
+- PRY-23.1 Con una carpeta de estado nueva, `osr` sin proyecto sirve en `/` la
+  bienvenida con su título, su lema, sus rasgos y `Iniciar`, y no muestra `Sin
+  proyecto abierto`.
+- PRY-23.2 Después de crear un proyecto desde la pantalla y cerrar `osr`, un
+  `osr` nuevo sin proyecto muestra la pantalla de inicio y no la bienvenida.
+- PRY-23.3 Después de `osr nuevo` en la terminal también.
+- PRY-23.4 Un intento de crear que termina en error no escribe
+  `primer-proyecto`.
+- PRY-23.5 `primer-proyecto` tiene permisos 0600 y su contenido es una sola
+  línea con una marca de tiempo, sin la ruta del proyecto.
+- PRY-23.6 En Firefox y en Chromium, `Iniciar` tiene el foco al cargar, y
+  pulsarlo muestra `Para empezar, hay que crear el primer proyecto.` con el
+  foco en `Carpeta nueva o vacía`.
+- PRY-23.7 En Firefox y en Chromium, crear el proyecto desde la vista
+  `Primer proyecto` muestra el resumen a más tardar 3 s después.
+- PRY-23.8 En Firefox y en Chromium, `Abrir un proyecto existente` despliega
+  `Carpeta del proyecto` y `Abrir proyecto` sin cambiar de página.
+
 ## 4. Fuera de alcance de este tramo
 
 - Migraciones de formato con respaldo previo, `FORMATO.md` y negarse a abrir
@@ -725,6 +984,9 @@ técnico va solo al registro técnico (SRV-12).
   versión 1 y cualquier otra se rechaza (PRY-03).
 - Instancia única que enfoca la pestaña existente, botón de cierre y cierre
   automático (v1.0). En el tramo 1 el bloqueo de PRY-05 evita dos procesos.
+- Cambiar de proyecto sin cerrar `osr`, una lista de proyectos recientes y un
+  selector de carpetas. El navegador no puede entregar la ruta de una carpeta
+  elegida, así que en el tramo 1 la carpeta se escribe (PRY-19, PRY-21).
 - Respaldo gestionado a disco externo (v1.0). En el tramo 1 solo la guía del
   README.
 - Interfaz para la bitácora y para la hoja de resumen de contacto. La

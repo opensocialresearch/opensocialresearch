@@ -20,7 +20,9 @@ Característica: Servidor local
 
     @SRV-01.1 @interfaz
     Escenario: osr sin proyecto escribe una sola línea y muestra Abrir y Crear
+      # Desde D-50, la primera vez se ve la bienvenida de PRY-23 y no esta pantalla.
       Dado una carpeta temporal vacía "{tmp}"
+      Y la cuenta ya creó o abrió un proyecto con osr antes
       Cuando se ejecuta `osr --sin-navegador`
       Entonces la salida estándar tiene exactamente una línea con la forma "Open Social Research está abierto en http://127.0.0.1:{P}/?token={token}"
       Cuando el navegador abre la dirección de esa línea

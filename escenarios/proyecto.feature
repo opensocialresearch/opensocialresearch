@@ -853,3 +853,359 @@ Característica: Proyecto en el disco
         | .rs:        |
         | backtrace   |
       Y la interfaz muestra un texto que empieza con "No se pudo guardar: "
+
+  @PRY-19
+  Regla: Crear un proyecto desde la pantalla de inicio
+    # «se pide a la API crear» manda la acción de crear con el token válido en el
+    # encabezado Authorization y "Origin" con el origen propio, como la pestaña.
+
+    @PRY-19.1
+    Escenario: Crear desde la pantalla de inicio deja el proyecto creado y abierto
+      Dado osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "{tmp}/estudio" y el nombre "Estudio de prueba"
+      Entonces la respuesta tiene estado 200
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"nombre": "Estudio de prueba", "carpeta": "{tmp}/estudio"}
+        """
+      Y la carpeta "{tmp}/estudio" tiene exactamente estas rutas
+        | ruta                              |
+        | proyecto.toml                     |
+        | README.md                         |
+        | sensibilidad.csv                  |
+        | bitacora/                         |
+        | bitacora/bitacora.md              |
+        | bitacora/registro.jsonl           |
+        | participantes/                    |
+        | participantes/participantes.csv   |
+        | participantes/consentimientos.csv |
+        | identificable/                    |
+        | identificable/correspondencia.csv |
+        | identificable/consentimientos/    |
+        | identificable/entrevistas/        |
+        | .osr/                             |
+        | .osr/indice.sqlite                |
+        | .osr/bloqueo                      |
+      Y osr está corriendo con el proyecto abierto
+      Y el archivo "bitacora/registro.jsonl" tiene exactamente 1 línea
+      Y la última línea del registro de eventos es de tipo "proyecto_creado"
+      Y la página "/" de la sesión contiene "Estudio de prueba"
+
+    @PRY-19.2
+    Escenario: Un ~ al principio es la carpeta personal
+      Dado existe la carpeta vacía "{tmp}/casa"
+      Y la variable de entorno "HOME" vale "{tmp}/casa"
+      Y osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "~/estudio" y el nombre "Estudio"
+      Entonces la respuesta tiene estado 200
+      Y existe el archivo "{tmp}/casa/estudio/proyecto.toml"
+
+    @PRY-19.3
+    Escenario: Sin nombre, el nombre es el último componente de la ruta
+      Dado osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "{tmp}/Investigación año uno" y el nombre ""
+      Entonces la respuesta tiene estado 200
+      Y la clave "nombre" de "{tmp}/Investigación año uno/proyecto.toml" vale "Investigación año uno"
+
+    @PRY-19.4 @PRY-18.1
+    Esquema del escenario: Un error al crear no crea nada y deja la pantalla de inicio
+      Dado existe el archivo "{tmp}/ocupada/notas.txt" con el texto "notas"
+      Y la cuenta ya creó o abrió un proyecto con osr antes
+      Y osr está corriendo sin proyecto
+      Y se tomó la huella de cada archivo de "{tmp}"
+      Cuando se pide a la API crear un proyecto con la ruta "<ruta>" y el nombre "<nombre>"
+      Entonces la respuesta tiene estado <estado>
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"error": "<error>", "mensaje": "<mensaje>"}
+        """
+      Y ningún archivo de "{tmp}" cambió respecto de las huellas tomadas
+      Y la página "/" de la sesión contiene "Sin proyecto abierto"
+
+      Ejemplos:
+        | ruta                  | nombre                  | estado | error           | mensaje                                                                                                 |
+        |                       | Estudio                 | 422    | ruta_vacia      | Hay que escribir la carpeta del proyecto.                                                               |
+        | estudio               | Estudio                 | 422    | ruta_relativa   | La carpeta tiene que ser una ruta completa, que empiece con / o con ~/.                                 |
+        | {tmp}/estudio         | {201 veces la letra a}  | 422    | nombre_invalido | El nombre del proyecto tiene que tener entre 1 y 200 caracteres, sin saltos de línea.                   |
+        | {tmp}/ocupada         | Estudio                 | 409    | carpeta_ocupada | La carpeta {tmp}/ocupada ya existe y no está vacía. Hay que elegir una carpeta nueva o vacía.           |
+        | {tmp}/no-existe/x     | Estudio                 | 422    | sin_carpeta     | No existe la carpeta {tmp}/no-existe.                                                                   |
+
+    @PRY-19.4 @PRY-18.1
+    Escenario: Un cuerpo que no es JSON no crea nada
+      Dado osr está corriendo sin proyecto
+      Y se tomó la huella de cada archivo de "{tmp}"
+      Cuando se manda a la API de crear un proyecto el cuerpo "no es json"
+      Entonces la respuesta tiene estado 400
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"error": "pedido_invalido", "mensaje": "El pedido no tiene la forma esperada."}
+        """
+      Y ningún archivo de "{tmp}" cambió respecto de las huellas tomadas
+
+    @PRY-19.5
+    Escenario: Los espacios alrededor de la ruta no cuentan
+      Dado osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "  {tmp}/estudio  " y el nombre "Estudio"
+      Entonces la respuesta tiene estado 200
+      Y existe el archivo "{tmp}/estudio/proyecto.toml"
+
+    @PRY-19.6 @interfaz
+    Escenario: Crear desde la pantalla muestra el resumen
+      Dado la cuenta ya creó o abrió un proyecto con osr antes
+      Y osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Cuando la persona escribe "{tmp}/estudio" en el campo "Carpeta nueva o vacía"
+      Y la persona escribe "Estudio de prueba" en el campo "Nombre"
+      Y la persona pulsa "Crear proyecto"
+      Entonces a más tardar 3 s después la interfaz muestra "Estudio de prueba"
+      Y la interfaz muestra "Proyecto nuevo"
+
+    @PRY-19.7 @interfaz @PRY-18.1
+    Escenario: Una carpeta ocupada se avisa debajo del botón y conserva lo escrito
+      Dado existe el archivo "{tmp}/ocupada/notas.txt" con el texto "notas"
+      Y la cuenta ya creó o abrió un proyecto con osr antes
+      Y osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Cuando la persona escribe "{tmp}/ocupada" en el campo "Carpeta nueva o vacía"
+      Y la persona escribe "Estudio" en el campo "Nombre"
+      Y la persona pulsa "Crear proyecto"
+      Entonces la interfaz muestra "La carpeta {tmp}/ocupada ya existe y no está vacía. Hay que elegir una carpeta nueva o vacía."
+      Y el campo "Carpeta nueva o vacía" tiene "{tmp}/ocupada"
+      Y el campo "Nombre" tiene "Estudio"
+
+  @PRY-20
+  Regla: Abrir un proyecto desde la pantalla de inicio
+
+    @PRY-20.1
+    Escenario: Abrir desde la pantalla de inicio deja el proyecto abierto
+      Dado una copia del proyecto de prueba
+      Y se guardó la cantidad de líneas del registro de eventos
+      Y osr está corriendo sin proyecto
+      Cuando se pide a la API abrir el proyecto "{proyecto}"
+      Entonces la respuesta tiene estado 200
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"nombre": "Proyecto de prueba inventado", "carpeta": "{proyecto}"}
+        """
+      Y osr está corriendo con el proyecto abierto
+      Y el registro de eventos tiene exactamente una línea nueva de tipo "verificacion"
+      Y la página "/" de la sesión contiene "Proyecto de prueba inventado"
+
+    @PRY-20.2 @PRY-18.1
+    Esquema del escenario: Una carpeta que no se puede abrir no se toca
+      Dado <preparación>
+      Y la cuenta ya creó o abrió un proyecto con osr antes
+      Y osr está corriendo sin proyecto
+      Y se tomó la huella de cada archivo de "{tmp}"
+      Cuando se pide a la API abrir el proyecto "<ruta>"
+      Entonces la respuesta tiene estado 422
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"error": "<error>", "mensaje": "<mensaje>"}
+        """
+      Y ningún archivo de "{tmp}" cambió respecto de las huellas tomadas
+      Y la página "/" de la sesión contiene "Sin proyecto abierto"
+
+      Ejemplos:
+        | preparación                                                | ruta              | error             | mensaje                                                                                       |
+        | no hay ninguna preparación adicional                       | {tmp}/no-existe   | sin_carpeta       | No existe la carpeta {tmp}/no-existe.                                                         |
+        | existe la carpeta vacía "{tmp}/vacia"                      | {tmp}/vacia       | proyecto_invalido | {tmp}/vacia no es un proyecto de Open Social Research (falta proyecto.toml).                  |
+        | una copia del proyecto de prueba con version_formato 2     | {proyecto}        | proyecto_invalido | Este proyecto usa la versión 2 del formato y esta versión de osr solo abre la versión 1.      |
+
+    @PRY-20.3 @PRY-18.1
+    Escenario: Un proyecto abierto en otro proceso no se abre
+      Dado una copia del proyecto de prueba
+      Y osr está corriendo con el proyecto abierto
+      Y osr está corriendo sin proyecto
+      Cuando se pide a la API abrir el proyecto "{proyecto}"
+      Entonces la respuesta tiene estado 409
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"error": "abierto_en_otro_proceso", "mensaje": "El proyecto ya está abierto en otro proceso (PID {PID del primer proceso}). Hay que usar esa pestaña o cerrar ese proceso."}
+        """
+      Y el primer proceso osr sigue atendiendo pedidos autenticados
+
+    @PRY-20.4 @interfaz
+    Escenario: Abrir desde la pantalla muestra el resumen
+      Dado una copia del proyecto de prueba
+      Y la cuenta ya creó o abrió un proyecto con osr antes
+      Y osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Cuando la persona escribe "{proyecto}" en el campo "Carpeta del proyecto"
+      Y la persona pulsa "Abrir proyecto"
+      Entonces a más tardar 3 s después la interfaz muestra "Proyecto de prueba inventado"
+
+  @PRY-21
+  Regla: Un proyecto por proceso
+
+    @PRY-21.1 @PRY-18.1
+    Escenario: Con un proyecto creado, crear otro no hace nada
+      Dado osr está corriendo sin proyecto
+      Y se pidió a la API crear un proyecto con la ruta "{tmp}/uno" y el nombre "Uno"
+      Cuando se pide a la API crear un proyecto con la ruta "{tmp}/dos" y el nombre "Dos"
+      Entonces la respuesta tiene estado 409
+      Y el cuerpo de la respuesta es el JSON
+        """
+        {"error": "proyecto_ya_abierto", "mensaje": "Ya hay un proyecto abierto en esta sesión. Para abrir otro hay que cerrar Open Social Research y volver a abrirlo."}
+        """
+      Y no existe "{tmp}/dos"
+      Y osr está corriendo con el proyecto abierto
+      Y la página "/" de la sesión contiene "Uno"
+
+    @PRY-21.2
+    Escenario: Con un proyecto abierto con osr abrir, abrir otro no escribe nada
+      Dado una copia del proyecto de prueba
+      Y un proyecto nuevo en "{tmp}/otro" creado y cerrado con `osr nuevo`
+      Y osr está corriendo con el proyecto abierto
+      Y se tomó la huella de cada archivo de "{tmp}"
+      Cuando se pide a la API abrir el proyecto "{tmp}/otro"
+      Entonces la respuesta tiene estado 409
+      Y ningún archivo de "{tmp}" cambió respecto de las huellas tomadas
+
+    @PRY-21.3
+    Escenario: De diez pedidos de crear a la vez se atiende uno solo
+      Dado osr está corriendo sin proyecto
+      Cuando se piden a la API a la vez 10 proyectos nuevos en las carpetas "{tmp}/p1" a "{tmp}/p10"
+      Entonces exactamente 1 respuesta tiene estado 200 y 9 tienen estado 409
+      Y existe exactamente una de las carpetas "{tmp}/p1" a "{tmp}/p10"
+
+    @PRY-21.4
+    Escenario: Un proyecto abierto desde la pantalla se cierra en orden
+      Dado una copia del proyecto de prueba
+      Y osr está corriendo sin proyecto
+      Y se pidió a la API abrir el proyecto "{proyecto}"
+      Cuando se envía SIGTERM al proceso osr
+      Entonces osr termina con código de salida 0 a más tardar 3 s después
+      Y no existe ".osr/bloqueo"
+
+  @PRY-22
+  Regla: Resumen del proyecto en el tramo 1
+
+    @PRY-22.1
+    Escenario: Un proyecto vacío empieza por el diseño de la investigación
+      Dado un proyecto nuevo creado con `osr nuevo`
+      Entonces la página "/" de la sesión contiene estos textos
+        | texto                                                                                                                                             |
+        | Proyecto nuevo                                                                                                                                    |
+        | {proyecto}                                                                                                                                        |
+        | La carpeta del proyecto está lista. Lo primero es el diseño de la investigación.                                                                  |
+        | Antes del trabajo de campo se escriben el tema, el posicionamiento, el problema, la pregunta y el enfoque. Van en espiral: se puede volver a cualquier paso cuando haga falta. |
+        | Diseño de la investigación                                                                                                                        |
+        | Tema e interés                                                                                                                                    |
+        | Posicionamiento y supuestos                                                                                                                       |
+        | Problema y estado de la cuestión                                                                                                                  |
+        | Pregunta y objetivos                                                                                                                              |
+        | Enfoque, metodología y métodos                                                                                                                    |
+        | Empezar el diseño                                                                                                                                 |
+        | Trabajo de campo                                                                                                                                  |
+        | Registrar participantes                                                                                                                           |
+        | La herramienta genera el seudónimo; el nombre real queda en la Zona identificable.                                                                |
+        | Registrar su consentimiento                                                                                                                       |
+        | Versión del formulario, modalidad, respaldo y alcances.                                                                                           |
+        | Importar las entrevistas                                                                                                                          |
+        | Audio y archivos de Whisper; después, revisar la transcripción.                                                                                   |
+        | Agregar participante                                                                                                                              |
+        | Se puede empezar en cualquier momento; el diseño se puede revisar después.                                                                        |
+        | Todavía no se hace desde aquí.                                                                                                                    |
+      Y la página "/" de la sesión tiene el título "estudio · Open Social Research"
+      Y la página "/" de la sesión no contiene "Sin proyecto abierto"
+
+    @PRY-22.2
+    Escenario: Un proyecto con datos avisa que todavía no los muestra
+      Dado una copia del proyecto de prueba
+      Y osr está corriendo con el proyecto abierto
+      Entonces la página "/" de la sesión contiene "Proyecto abierto"
+      Y la página "/" de la sesión contiene "Este proyecto ya tiene participantes o entrevistas. Esta versión todavía no los muestra aquí; están en la carpeta del proyecto."
+      Y la página "/" de la sesión no contiene "Diseño de la investigación"
+
+    @PRY-22.3
+    Escenario: El resumen no muestra nombres de la correspondencia
+      Dado una copia del proyecto de prueba
+      Y osr está corriendo con el proyecto abierto
+      Entonces la página "/" de la sesión no contiene ninguno de los nombres de la tabla de correspondencia de prueba
+
+    @PRY-22.4
+    Escenario: El nombre del proyecto se muestra como texto
+      Dado osr está corriendo sin proyecto
+      Y se pidió a la API crear un proyecto con la ruta "{tmp}/estudio" y el nombre "<b>Estudio</b> & otro"
+      Entonces la página "/" de la sesión tiene el título "<b>Estudio</b> & otro · Open Social Research"
+      Y la página "/" de la sesión no tiene ningún elemento "b"
+
+  @PRY-23
+  Regla: Bienvenida del primer uso
+
+    @PRY-23.1
+    Escenario: La primera vez se ve la bienvenida
+      Dado osr está corriendo sin proyecto
+      Entonces la página "/" de la sesión contiene estos textos
+        | texto                                                                                         |
+        | Open Social Research                                                                          |
+        | Investigación social aplicada de punta a punta, desde la primera pregunta hasta la publicación. |
+        | Libre                                                                                         |
+        | Código abierto con licencia MIT, sin licencias que pagar.                                     |
+        | Local                                                                                         |
+        | Todo queda en esta computadora, sin cuentas ni conexión a internet.                           |
+        | Pluralista                                                                                    |
+        | Sirve igual para investigación cualitativa, cuantitativa o mixta.                             |
+        | Iniciar                                                                                       |
+        | Nace en el programa de Investigación Social Aplicada de la UNED.                              |
+      Y la página "/" de la sesión no contiene "Sin proyecto abierto"
+
+    @PRY-23.2
+    Escenario: Después de crear el primer proyecto ya no sale la bienvenida
+      Dado osr está corriendo sin proyecto
+      Y se pidió a la API crear un proyecto con la ruta "{tmp}/estudio" y el nombre "Estudio"
+      Y osr se cierra de forma ordenada
+      Cuando osr está corriendo sin proyecto
+      Entonces la página "/" de la sesión contiene "Sin proyecto abierto"
+      Y la página "/" de la sesión no contiene "Investigación social aplicada de punta a punta"
+
+    @PRY-23.3
+    Escenario: Crear el proyecto en la terminal también cuenta como primer uso
+      Dado un proyecto nuevo creado con `osr nuevo`
+      Y osr se cierra de forma ordenada
+      Cuando osr está corriendo sin proyecto
+      Entonces la página "/" de la sesión contiene "Sin proyecto abierto"
+
+    @PRY-23.4
+    Escenario: Un error al crear no cuenta como primer uso
+      Dado osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "estudio" y el nombre "Estudio"
+      Entonces la respuesta tiene estado 422
+      Y la carpeta de estado de osr no tiene el archivo "primer-proyecto"
+      Y la página "/" de la sesión contiene "Iniciar"
+
+    @PRY-23.5
+    Escenario: El archivo del primer uso no guarda la ruta del proyecto
+      Dado osr está corriendo sin proyecto
+      Cuando se pide a la API crear un proyecto con la ruta "{tmp}/estudio" y el nombre "Estudio"
+      Entonces la carpeta de estado de osr tiene el archivo "primer-proyecto" con permisos 0600
+      Y el archivo "primer-proyecto" de la carpeta de estado de osr es una sola línea con una marca de tiempo
+      Y el archivo "primer-proyecto" de la carpeta de estado de osr no contiene "{tmp}"
+
+    @PRY-23.6 @interfaz
+    Escenario: Iniciar lleva al primer proyecto con el foco en la carpeta
+      Dado osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Entonces el botón con el foco es "Iniciar"
+      Cuando la persona pulsa "Iniciar"
+      Entonces la interfaz muestra "Para empezar, hay que crear el primer proyecto."
+      Y el campo con el foco es "Carpeta nueva o vacía"
+
+    @PRY-23.7 @interfaz
+    Escenario: Crear desde el primer proyecto muestra el resumen
+      Dado osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Cuando la persona pulsa "Iniciar"
+      Y la persona escribe "{tmp}/estudio" en el campo "Carpeta nueva o vacía"
+      Y la persona pulsa "Crear proyecto"
+      Entonces a más tardar 3 s después la interfaz muestra "Proyecto nuevo"
+
+    @PRY-23.8 @interfaz
+    Escenario: Abrir un proyecto existente se despliega en el lugar
+      Dado osr está corriendo sin proyecto
+      Y la interfaz está abierta en el navegador
+      Cuando la persona pulsa "Iniciar"
+      Y la persona pulsa "Abrir un proyecto existente"
+      Entonces la interfaz muestra el campo "Carpeta del proyecto"
+      Y la interfaz muestra "Abrir proyecto"

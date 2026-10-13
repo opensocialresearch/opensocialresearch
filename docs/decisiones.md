@@ -4,6 +4,90 @@ Registro de las decisiones del proyecto, de la más reciente a la más antigua.
 Cada cambio de alcance, de umbral, de herramienta o de especificación aprobada
 se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
+## 2026-10-12 · Primer uso, inicio por el diseño y sistema visual nuevo
+
+- **D-51.** Sistema visual nuevo. Carlos rehízo el sistema de diseño en
+  Claude Design el 2026-10-12 y pidió adoptarlo. Pasa de «negro sobre papel»
+  a una herramienta con la claridad de una app de escritorio: ventana gris
+  claro (`--fondo`), listas y formularios en tarjetas blancas sin sombra,
+  radios concéntricos (control 7, fila 10, tarjeta 12, diálogo 14, símbolo
+  15), un solo azul para actuar (`--acento-relleno`), verde, naranja y rojo
+  para hecho, revisar y error, y anillo de foco de 3 px (`--foco`). La
+  interfaz usa la fuente del sistema, así que se retiran Archivo e IBM Plex
+  Mono con sus licencias, y Source Serif 4 queda solo para lo que la persona
+  escribe y lee largo, como transcripciones y el diseño de la investigación.
+  La zona identificable pasa a índigo con candado, en vez de la trama sin
+  color. Se mantiene D-41: el tema es claro por defecto aunque la nota del
+  diseño diga que el primer arranque sigue la preferencia del sistema. La
+  lista de fuentes del diseño piensa en Mac y Windows; en Linux cae en
+  `system-ui`, que hay que mirar en pantalla. Reemplaza el sistema de D-40
+  en `recursos/estilos.css`; lo demás de D-40 sigue (todo estilo en la hoja
+  y todo código en archivos aparte, por la política de SRV-08).
+
+- **D-50.** Bienvenida del primer uso (PRY-23). Carlos pidió que la primera
+  vez se vea una pantalla con el nombre, un lema y un botón «Iniciar», y
+  después la invitación a crear el primer proyecto. «Primera vez» queda
+  fijado como mientras la cuenta no haya creado ni abierto ningún proyecto
+  con `osr`: quien pulsa «Iniciar» y cierra sin crear vuelve a ver la
+  bienvenida. Se descartó recordar solo el clic en «Iniciar», que dejaría a
+  la persona sin la invitación justo cuando todavía no tiene proyecto. Lo
+  recuerda el archivo `primer-proyecto` de la carpeta de estado, con la
+  marca de tiempo y nada del proyecto. El lema sale de VISION.md. Cambia el
+  texto de `osr` en la tabla de SRV-01 y el escenario aprobado SRV-01.1, que
+  ahora parte de una cuenta que ya usó `osr`; los escenarios de PRY-19 y
+  PRY-20 que esperan la pantalla de inicio llevan la misma condición.
+
+- **D-49.** El proyecto empieza por el diseño de la investigación. Carlos
+  preguntó si la investigación empieza por definir la ontología y la
+  epistemología. Se revisaron contra el texto, con citas verificadas, las
+  lecturas de 05645, 05646 y 05647, las consignas y la tutoría 1 de 05646.
+  La bibliografía respalda la coherencia entre supuestos y métodos y que los
+  supuestos se hagan explícitos desde el diseño (Jiménez Cortés, 2021,
+  p. 182; Villalobos, 2017, pp. 7-8), pero no que se definan primero y de
+  ellos se deduzca lo demás: la investigación se inicia por el tema (Sautu
+  et al., 2005, p. 30), entre los niveles no hay una relación mecánica
+  (Della Porta y Keating, 2013, p. 19), la pregunta orienta el enfoque y los
+  métodos (tutoría 1 de 05646; Della Porta y Keating, 2013, p. 339) y el
+  proceso es en espiral (Sautu et al., 2005, p. 34; Kvale, 2011, p. 87). Por
+  eso el resumen de un proyecto vacío (PRY-22) pone primero el diseño de la
+  investigación en cinco pasos sin bloqueos, tema e interés, posicionamiento
+  y supuestos, problema y estado de la cuestión, pregunta y objetivos, y
+  enfoque, metodología y métodos, y deja el trabajo de campo en segundo
+  plano. Las pantallas de esos pasos están diseñadas, pero el módulo del
+  diseño de la investigación todavía no tiene especificación; cada pregunta
+  guía tendrá su fuente cuando la tenga.
+
+- **D-48.** Aprobada por el autor en la conversación del 2026-10-12. PRY-19 a PRY-22
+  especifican lo que PRY-01, PRY-04 y SRV-01 solo anunciaban, que la pantalla
+  sin proyecto crea y abre proyectos, y fijan cuatro cosas.
+  1. La carpeta se escribe en un campo de texto, porque el navegador no
+     entrega la ruta real de una carpeta elegida en un selector. Se quitan los
+     espacios de los extremos, `~` y `~/…` son la carpeta personal, y una ruta
+     relativa se rechaza, porque la persona no ve desde qué carpeta corre
+     `osr`. Se descartó resolverla contra la carpeta personal, que crearía
+     proyectos en lugares inesperados.
+  2. Después de crear o abrir se ve un resumen provisional, con el nombre, la
+     carpeta y, si el proyecto está vacío, los tres pasos para empezar sin
+     acciones. Con datos, avisa que esta versión todavía no los muestra en vez
+     de mostrar una lista vacía que mentiría. Las listas de PAR-10, TRA-03 y
+     TRA-13 y el resultado de PRY-11 lo completan cuando lleguen. El orden de
+     los pasos, consentimiento antes de importar la entrevista, sale de D-02,
+     que está en la lista de D-47 para revisar contra la literatura del ISA.
+     Los textos y el orden de este punto los reemplaza D-49.
+  3. Los errores en pantalla son los textos de la terminal sin `osr: ` y con
+     mayúscula inicial, debajo del botón, y los campos conservan lo escrito.
+     La API responde `{"error", "mensaje"}` como el resto de `/api/`.
+  4. Un proceso abre un solo proyecto, como ya decía PRY-04. Para cambiar de
+     proyecto se cierra `osr` y se vuelve a abrir, y un segundo pedido de
+     crear o abrir responde 409. Se descartó volver a la pantalla de inicio en
+     el mismo proceso, que pediría soltar el bloqueo y vaciar el estado en
+     memoria con una pestaña vieja todavía abierta.
+  Con esto, `osr abrir` y `osr nuevo` dejan de mostrar la pantalla sin
+  proyecto (D-40) y muestran el resumen, y los botones de la pantalla de inicio
+  se activan. Los escenarios que no son `@interfaz` hablan con la API como la
+  pestaña, con el token y el `Origin` propio, así corren antes de que exista
+  Playwright.
+
 ## 2026-10-12 · Decisiones metodológicas desde la literatura del ISA
 
 - **D-47.** Carlos fijó que todas las decisiones metodológicas, los pasos que

@@ -6,6 +6,14 @@ se anota aquí con fecha y razón (ver [DESARROLLO.md](../DESARROLLO.md)).
 
 ## 2026-10-12 · Primer requisito implementado (PRY-01)
 
+- **D-44.** Órdenes de respaldo del README (PRY-16.3). La plantilla del
+  README ya traía las dos órdenes, así que el cambio son solo los pasos. Una
+  «orden» de una sección es una línea de un bloque de código, sangrado con
+  cuatro espacios o entre cercas, y «copia todo salvo X» es una orden con
+  `--exclude X` (o `--exclude=X`, con o sin comillas simples) junto a otra
+  que no excluye nada. El analizador de secciones queda en
+  `tests/pasos/readme.rs` para PRY-16.1 y PRY-16.2.
+
 - **D-41.** Tema claro por defecto. Carlos pidió trabajar con el tema claro
   por defecto. La interfaz no sigue `prefers-color-scheme` del sistema, como
   proponían las notas del diseño, y el oscuro queda solo para cuando la raíz

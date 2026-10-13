@@ -6,6 +6,7 @@
 mod archivos;
 mod http;
 mod orden;
+mod readme;
 mod servidor;
 
 use std::collections::{BTreeMap, BTreeSet};
